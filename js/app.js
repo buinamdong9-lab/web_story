@@ -1,6 +1,10 @@
 /**
  * Thần Nữ Tiêu Dao Lục & Multi-Story Library SPA Engine
- * Supports unlimited crawled novels, Library View, Per-Story Progress, Pre-fetching & Multi-Voice TTS
+ * Mobile Optimized (iOS Safari & Android Chrome):
+ * - Screen WakeLock API (Prevents screen sleep during listening)
+ * - MediaSession API (Lock screen / Control Center playback widget)
+ * - iOS Speech Gesture Warmup & Watchdog Timer (Never hangs on long paragraphs)
+ * - Android Chromium Speech Engine Timeout Fix
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoScrollSpeed: 2,
     lastScrollY: 0,
     isHeaderHidden: false,
+    wakeLock: null,
     bookmarks: JSON.parse(localStorage.getItem('tn_bookmarks') || '[]'),
     readingHistory: JSON.parse(localStorage.getItem('tn_reading_history') || '[]'),
     settings: {
@@ -25,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fontFamily: localStorage.getItem('tn_font') || "'Lora', Georgia, serif",
       fontSize: parseInt(localStorage.getItem('tn_fontSize') || '18', 10)
     },
+    // Multi-Voice Mobile-Optimized TTS Engine
     tts: {
       synth: window.speechSynthesis,
       utterance: null,
@@ -36,7 +42,9 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedVoice: null,
       rate: 1.0,
       pitch: 1.0,
-      preset: 'custom'
+      preset: 'custom',
+      watchdogTimer: null,
+      isWarmedUp: false
     }
   };
 
@@ -134,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTTSVoices();
     await loadLibraryStories();
     setupEventListeners();
+    setupMobileAudioGestureWarmup();
     handleHashRoute();
 
     window.addEventListener('hashchange', handleHashRoute, { passive: true });
@@ -167,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
       timestamp: Date.now()
     }));
 
-    // Update global reading history
     if (state.storyMeta) {
       const existingIdx = state.readingHistory.findIndex(h => h.storyId === storyId);
       const historyItem = {
@@ -188,6 +196,79 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // --- WAKE LOCK API (Keeps mobile screen on while listening) ---
+  async function acquireWakeLock() {
+    try {
+      if ('wakeLock' in navigator && !state.wakeLock) {
+        state.wakeLock = await navigator.wakeLock.request('screen');
+        state.wakeLock.addEventListener('release', () => {
+          state.wakeLock = null;
+        });
+      }
+    } catch (err) {
+      console.log('WakeLock not granted:', err);
+    }
+  }
+
+  function releaseWakeLock() {
+    if (state.wakeLock) {
+      state.wakeLock.release().then(() => {
+        state.wakeLock = null;
+      }).catch(() => {});
+    }
+  }
+
+  // Re-acquire wake lock if user switches back to browser tab
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.tts.isPlaying && !state.tts.isPaused) {
+      acquireWakeLock();
+    }
+  });
+
+  // --- MEDIA SESSION API (Lock Screen & Notification Center Controls) ---
+  function updateMediaSessionMetadata(chapTitle) {
+    if ('mediaSession' in navigator && state.storyMeta) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: chapTitle,
+        artist: state.storyMeta.title,
+        album: 'Kho Truyện Audio Online',
+        artwork: [
+          { src: state.storyMeta.cover_image || 'images/cover.jpg', sizes: '512x512', type: 'image/jpeg' }
+        ]
+      });
+
+      navigator.mediaSession.setActionHandler('play', resumeTTS);
+      navigator.mediaSession.setActionHandler('pause', pauseTTS);
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        if (state.tts.currentParaIndex > 0) startTTS(state.tts.currentParaIndex - 1);
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        if (state.tts.currentParaIndex < state.tts.paragraphs.length - 1) {
+          startTTS(state.tts.currentParaIndex + 1);
+        }
+      });
+    }
+  }
+
+  // --- MOBILE SPEECH GESTURE WARMUP ---
+  function setupMobileAudioGestureWarmup() {
+    const warmup = () => {
+      if (state.tts.isWarmedUp || !state.tts.synth) return;
+      try {
+        const dummyUtterance = new SpeechSynthesisUtterance(' ');
+        dummyUtterance.volume = 0.01;
+        state.tts.synth.speak(dummyUtterance);
+        state.tts.isWarmedUp = true;
+        initTTSVoices();
+      } catch (e) {}
+      document.removeEventListener('touchstart', warmup);
+      document.removeEventListener('click', warmup);
+    };
+
+    document.addEventListener('touchstart', warmup, { passive: true, once: true });
+    document.addEventListener('click', warmup, { passive: true, once: true });
+  }
+
   // --- LIBRARY CATALOGUE & DATA ---
   async function loadLibraryStories() {
     try {
@@ -196,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const libData = await res.json();
         state.stories = libData.stories || [];
       } else {
-        // Fallback default
         state.stories = [{
           id: 'than_nu_tieu_dao_luc',
           title: 'Thần Nữ Tiêu Dao Lục',
@@ -304,7 +384,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (DOM.quickStorySelect) DOM.quickStorySelect.value = storyId;
 
     try {
-      // Try path in stories directory, fallback to root toc.json
       let res = await fetch(`data/stories/${storyId}/toc.json`);
       if (!res.ok) {
         res = await fetch('data/toc.json');
@@ -313,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
       state.storyMeta = await res.json();
       state.toc = state.storyMeta.chapters || [];
 
-      // Update UI
       DOM.brandTitle.textContent = state.storyMeta.title;
       DOM.drawerStoryTitle.textContent = `Mục Lục: ${state.storyMeta.title}`;
       DOM.storyTitle.textContent = state.storyMeta.title;
@@ -323,7 +401,6 @@ document.addEventListener('DOMContentLoaded', () => {
       DOM.statStoryStatus.textContent = state.storyMeta.status || 'Hoàn Thành';
       DOM.storyDescText.textContent = state.storyMeta.description || 'Bộ truyện đặc sắc.';
 
-      // Tags
       const tags = (state.storyMeta.category || 'Tiên Hiệp, Huyền Huyễn').split(',').map(t => t.trim());
       DOM.storyMetaTags.innerHTML = tags.map(t => `<span class="tag">${escapeHTML(t)}</span>`).join('');
 
@@ -491,7 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
 
     if (autoStartTTS) {
-      setTimeout(() => startTTS(0), 400);
+      setTimeout(() => startTTS(0), 300);
     }
   }
 
@@ -534,7 +611,6 @@ document.addEventListener('DOMContentLoaded', () => {
   async function handleHashRoute() {
     const hash = window.location.hash || '#library';
 
-    // Route: #read/:storyId/:chapIndex
     if (hash.startsWith('#read/')) {
       const parts = hash.replace('#read/', '').split('/');
       const storyId = parts[0] || state.currentStoryId;
@@ -543,7 +619,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Route: #story/:storyId (Story Overview)
     if (hash.startsWith('#story/')) {
       const storyId = hash.replace('#story/', '').trim();
       await loadStoryTOC(storyId || state.currentStoryId);
@@ -556,7 +631,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Backward compatibility: #chap-X
     if (hash.startsWith('#chap-')) {
       const chapIndex = parseInt(hash.replace('#chap-', ''), 10);
       if (!isNaN(chapIndex)) {
@@ -590,20 +664,29 @@ document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
-  // --- MULTI-VOICE TEXT-TO-SPEECH (TTS) ENGINE ---
+  // --- MULTI-VOICE TEXT-TO-SPEECH (TTS) ENGINE FOR ANDROID & IOS ---
   function initTTSVoices() {
     if (!state.tts.synth) return;
 
     function populateVoices() {
       state.tts.voices = state.tts.synth.getVoices();
+      if (!DOM.selectTtsVoice) return;
       DOM.selectTtsVoice.innerHTML = '';
       
-      const viVoices = state.tts.voices.filter(v => v.lang.includes('vi') || v.lang.includes('VI'));
-      const otherVoices = state.tts.voices.filter(v => !v.lang.includes('vi') && !v.lang.includes('VI'));
+      // Match Vietnamese voices across iOS (Apple Siri/Linh), Android (Google Tiếng Việt), Windows & Web
+      const viVoices = state.tts.voices.filter(v => 
+        v.lang.toLowerCase().includes('vi') || 
+        v.name.toLowerCase().includes('vietnam') ||
+        v.name.toLowerCase().includes('tiếng việt') ||
+        v.name.toLowerCase().includes('linh') ||
+        v.name.toLowerCase().includes('an') ||
+        v.name.toLowerCase().includes('mai')
+      );
+      const otherVoices = state.tts.voices.filter(v => !viVoices.includes(v));
 
       if (viVoices.length > 0) {
         const groupVi = document.createElement('optgroup');
-        groupVi.label = '🇻🇳 Giọng Tiếng Việt';
+        groupVi.label = '🇻🇳 Giọng Tiếng Việt (iOS & Android)';
 
         viVoices.forEach(voice => {
           const opt = document.createElement('option');
@@ -612,7 +695,8 @@ document.addEventListener('DOMContentLoaded', () => {
           let displayTitle = voice.name;
           if (voice.name.includes('HoaiMy')) displayTitle = '🇻🇳 Hoài Mỹ (Nữ Truyền Cảm)';
           else if (voice.name.includes('NamMinh')) displayTitle = '🇻🇳 Nam Minh (Nam Trầm Ấm)';
-          else if (voice.name.includes('Google')) displayTitle = '🇻🇳 Google Tiếng Việt';
+          else if (voice.name.toLowerCase().includes('google')) displayTitle = '🇻🇳 Google Tiếng Việt (Android)';
+          else if (voice.name.toLowerCase().includes('linh') || voice.name.toLowerCase().includes('apple')) displayTitle = '🇻🇳 Siri Tiếng Việt (iOS)';
           else displayTitle = `🇻🇳 ${voice.name}`;
 
           opt.textContent = displayTitle;
@@ -627,7 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const groupOther = document.createElement('optgroup');
         groupOther.label = '🌐 Giọng Quốc Tế Khác';
 
-        otherVoices.slice(0, 8).forEach(voice => {
+        otherVoices.slice(0, 6).forEach(voice => {
           const opt = document.createElement('option');
           opt.value = voice.name;
           opt.textContent = `${voice.name} (${voice.lang})`;
@@ -658,7 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (presetType === 'female_warm') {
       state.tts.pitch = 1.25;
       state.tts.rate = 1.05;
-      const femaleVoice = state.tts.voices.find(v => v.name.toLowerCase().includes('hoaimy') || v.name.toLowerCase().includes('female'));
+      const femaleVoice = state.tts.voices.find(v => v.name.toLowerCase().includes('hoaimy') || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('linh'));
       if (femaleVoice) state.tts.selectedVoice = femaleVoice;
     } else if (presetType === 'storyteller') {
       state.tts.pitch = 1.0;
@@ -684,20 +768,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (paraIndex >= state.tts.paragraphs.length) {
       if (state.currentChapIndex < state.toc.length) {
         window.location.hash = `#read/${state.currentStoryId}/${state.currentChapIndex + 1}`;
-        setTimeout(() => loadChapter(state.currentStoryId, state.currentChapIndex + 1, true), 500);
+        setTimeout(() => loadChapter(state.currentStoryId, state.currentChapIndex + 1, true), 400);
       } else {
         stopTTS();
-        alert('Đã đọc xong toàn bộ truyện!');
+        alert('Đã đọc xong toàn bộ chương!');
       }
       return;
     }
 
+    // Android Chromium fix: unpause synth before canceling
+    if (state.tts.synth.paused) {
+      state.tts.synth.resume();
+    }
     state.tts.synth.cancel();
-    state.tts.currentParaIndex = paraIndex;
+    clearTimeout(state.tts.watchdogTimer);
 
+    state.tts.currentParaIndex = paraIndex;
     const textToRead = state.tts.paragraphs[paraIndex];
     state.tts.utterance = new SpeechSynthesisUtterance(textToRead);
 
+    // Apply voice, rate, pitch, language
     if (state.tts.selectedVoice) {
       state.tts.utterance.voice = state.tts.selectedVoice;
     }
@@ -707,19 +797,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     highlightParagraph(paraIndex);
     updateScrubberUI();
+    acquireWakeLock();
+    updateMediaSessionMetadata(DOM.chapTitle.textContent);
 
-    state.tts.utterance.onend = () => {
+    let isAdvancing = false;
+    const advanceNext = () => {
+      if (isAdvancing) return;
+      isAdvancing = true;
+      clearTimeout(state.tts.watchdogTimer);
       if (state.tts.isPlaying && !state.tts.isPaused) {
         startTTS(state.tts.currentParaIndex + 1);
       }
     };
 
+    state.tts.utterance.onend = advanceNext;
     state.tts.utterance.onerror = (e) => {
-      console.warn('TTS error event:', e);
-      if (state.tts.isPlaying) {
-        startTTS(state.tts.currentParaIndex + 1);
-      }
+      console.warn('TTS event error:', e);
+      advanceNext();
     };
+
+    // Mobile Watchdog: If onend doesn't fire after estimated speech time + 4s, force advance
+    const estimatedDurationMs = Math.max(3000, (textToRead.length / 10) * 1000 / state.tts.rate) + 4000;
+    state.tts.watchdogTimer = setTimeout(() => {
+      if (state.tts.isPlaying && !state.tts.isPaused) {
+        advanceNext();
+      }
+    }, estimatedDurationMs);
 
     state.tts.isPlaying = true;
     state.tts.isPaused = false;
@@ -732,6 +835,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.tts.synth && state.tts.isPlaying) {
       state.tts.synth.pause();
       state.tts.isPaused = true;
+      clearTimeout(state.tts.watchdogTimer);
+      releaseWakeLock();
       updateTTSControlsUI();
     }
   }
@@ -740,6 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.tts.synth && state.tts.isPaused) {
       state.tts.synth.resume();
       state.tts.isPaused = false;
+      acquireWakeLock();
       updateTTSControlsUI();
     } else {
       startTTS(state.tts.currentParaIndex);
@@ -750,9 +856,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.tts.synth) {
       state.tts.synth.cancel();
     }
+    clearTimeout(state.tts.watchdogTimer);
     state.tts.isPlaying = false;
     state.tts.isPaused = false;
     removeParagraphHighlights();
+    releaseWakeLock();
     updateTTSControlsUI();
   }
 
@@ -874,7 +982,7 @@ document.addEventListener('DOMContentLoaded', () => {
     DOM.btnHeroListen.addEventListener('click', () => {
       const lastChap = getStoryLastChap(state.currentStoryId);
       window.location.hash = `#read/${state.currentStoryId}/${lastChap}`;
-      setTimeout(() => startTTS(0), 400);
+      setTimeout(() => startTTS(0), 300);
     });
 
     // TOC Search Filter with Debounce

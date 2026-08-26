@@ -156,6 +156,15 @@ def build_all_library():
             except Exception as e:
                 print(f"Skipping {fname}: {e}")
 
+    # Write global Library stories catalogue
+    library_file = os.path.join(data_dir, 'stories.json')
+    with open(library_file, 'w', encoding='utf-8') as lf:
+        json.dump({
+            'updated_at': '2026-08-26',
+            'total_stories': len(stories_manifest),
+            'stories': stories_manifest
+        }, lf, ensure_ascii=False, indent=2)
+
     # Sync web assets to root directory for direct GitHub Pages support
     for folder in ['css', 'js', 'data', 'images']:
         src = os.path.join(web_dir, folder)
@@ -169,4 +178,5 @@ def build_all_library():
 
 if __name__ == '__main__':
     build_all_library()
+
 
