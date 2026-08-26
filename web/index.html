@@ -14,10 +14,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
-  <!-- PWA Manifest & App Icon -->
+  <!-- PWA Manifest & Luxury App Icon -->
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
-  <link rel="apple-touch-icon" href="images/cover.jpg">
+  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
+  <link rel="apple-touch-icon" href="images/favicon.svg">
   
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -28,9 +28,22 @@
     <div class="container nav-wrapper">
       <div style="display: flex; align-items: center; gap: 12px;">
         <a href="#library" class="brand-logo" id="brandLogo">
-          <svg viewBox="0 0 24 24">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          <svg viewBox="0 0 64 64" width="30" height="30" fill="none" style="filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.6));">
+            <defs>
+              <linearGradient id="logoGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#a855f7"/>
+                <stop offset="50%" stop-color="#ec4899"/>
+                <stop offset="100%" stop-color="#f59e0b"/>
+              </linearGradient>
+              <linearGradient id="logoGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fde047"/>
+                <stop offset="100%" stop-color="#f59e0b"/>
+              </linearGradient>
+            </defs>
+            <rect x="4" y="4" width="56" height="56" rx="16" fill="#151824" stroke="url(#logoGlow)" stroke-width="2"/>
+            <path d="M32 47C25 42 16 41 12 43V21C16 19 25 20 32 24C39 20 48 19 52 21V43C48 41 39 42 32 47Z" fill="url(#logoGlow)"/>
+            <path d="M32 24V47" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            <path d="M32 11L34.5 16.5L40 17.5L36 21.5L37 27L32 24L27 27L28 21.5L24 17.5L29.5 16.5L32 11Z" fill="url(#logoGold)"/>
           </svg>
           <span id="brandTitle">Kho Truyện</span>
         </a>
