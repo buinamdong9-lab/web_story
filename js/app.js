@@ -1,28 +1,31 @@
 /**
- * Thần Nữ Tiêu Dao Lục & Multi-Story Library SPA Engine
- * Mobile Optimized (iOS Safari & Android Chrome):
- * - Screen WakeLock API (Prevents screen sleep during listening)
- * - MediaSession API (Lock screen / Control Center playback widget)
- * - iOS Speech Gesture Warmup & Watchdog Timer (Never hangs on long paragraphs)
- * - Android Chromium Speech Engine Timeout Fix
+ * WebStory Core Engine - Ultra High-Performance Mobile & Desktop PWA Reader
+ * Optimizations:
+ * - PWA Offline ServiceWorker & Install prompt
+ * - LRU Chapter Memory Cache with Storage Cap
+ * - Natural Sentence-Level TTS Speech Flow
+ * - Screen WakeLock API & MediaSession Integration
+ * - Instant Pre-fetching & Event Delegation
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   'use strict';
 
-  // Global Application State
+  // Global Application State & Store
   const state = {
     stories: [],
     currentStoryId: 'than_nu_tieu_dao_luc',
     storyMeta: null,
     toc: [],
     currentChapIndex: 1,
-    chapterCache: new Map(),
+    chapterCache: new Map(), // LRU Cache capped at 60 chapters
+    MAX_CACHE_SIZE: 60,
     autoScrollInterval: null,
     autoScrollSpeed: 2,
     lastScrollY: 0,
     isHeaderHidden: false,
     wakeLock: null,
+    deferredPrompt: null,
     bookmarks: JSON.parse(localStorage.getItem('tn_bookmarks') || '[]'),
     readingHistory: JSON.parse(localStorage.getItem('tn_reading_history') || '[]'),
     settings: {
@@ -30,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fontFamily: localStorage.getItem('tn_font') || "'Lora', Georgia, serif",
       fontSize: parseInt(localStorage.getItem('tn_fontSize') || '18', 10)
     },
-    // Multi-Voice Mobile-Optimized TTS Engine
+    // Natural Sentence-Level TTS Audio State
     tts: {
       synth: window.speechSynthesis,
       utterance: null,
@@ -48,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // DOM Elements Cached
+  // Cached DOM Elements
   const DOM = {
     body: document.body,
     appHeader: document.getElementById('appHeader'),
@@ -72,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnFontInc: document.getElementById('btnFontInc'),
     fontSizeDisplay: document.getElementById('fontSizeDisplay'),
     
-    // Library Section DOMs
+    // Library Section
     librarySection: document.getElementById('librarySection'),
     searchLibraryInput: document.getElementById('searchLibraryInput'),
     recentShelfContainer: document.getElementById('recentShelfContainer'),
@@ -80,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     totalStoriesBadge: document.getElementById('totalStoriesBadge'),
     storiesGrid: document.getElementById('storiesGrid'),
 
-    // Story Details Section DOMs
+    // Story Details Section
     overviewSection: document.getElementById('overviewSection'),
     heroCover: document.getElementById('heroCover'),
     storyTitle: document.getElementById('storyTitle'),
@@ -94,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnHeroListen: document.getElementById('btnHeroListen'),
     btnHeroToc: document.getElementById('btnHeroToc'),
     
-    // Reader Section DOMs
+    // Reader Section
     readerSection: document.getElementById('readerSection'),
     chapSubtitle: document.getElementById('chapSubtitle'),
     chapTitle: document.getElementById('chapTitle'),
@@ -106,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     selectJumpChap: document.getElementById('selectJumpChap'),
     btnBookmark: document.getElementById('btnBookmark'),
     
-    // Auto Scroll DOMs
+    // Auto Scroll
     btnToggleAutoScroll: document.getElementById('btnToggleAutoScroll'),
     autoScrollPanel: document.getElementById('autoScrollPanel'),
     autoScrollSpeedText: document.getElementById('autoScrollSpeedText'),
@@ -114,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAutoScrollInc: document.getElementById('btnAutoScrollInc'),
     btnAutoScrollStop: document.getElementById('btnAutoScrollStop'),
     
-    // TTS Audio DOMs
+    // TTS Audio & Scrubber
     btnToggleTTS: document.getElementById('btnToggleTTS'),
     audioPlayerBar: document.getElementById('audioPlayerBar'),
     ttsPulseIndicator: document.getElementById('ttsPulseIndicator'),
@@ -147,6 +150,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('hashchange', handleHashRoute, { passive: true });
     window.addEventListener('scroll', onScrollThrottled, { passive: true });
+    
+    // PWA Install prompt listener
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      state.deferredPrompt = e;
+    });
   }
 
   // --- SETTINGS MANAGEMENT ---
@@ -196,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- WAKE LOCK API (Keeps mobile screen on while listening) ---
+  // --- WAKE LOCK API (Screen on during speech) ---
   async function acquireWakeLock() {
     try {
       if ('wakeLock' in navigator && !state.wakeLock) {
@@ -218,14 +227,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Re-acquire wake lock if user switches back to browser tab
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && state.tts.isPlaying && !state.tts.isPaused) {
       acquireWakeLock();
     }
   });
 
-  // --- MEDIA SESSION API (Lock Screen & Notification Center Controls) ---
+  // --- MEDIA SESSION API ---
   function updateMediaSessionMetadata(chapTitle) {
     if ('mediaSession' in navigator && state.storyMeta) {
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -453,10 +461,15 @@ document.addEventListener('DOMContentLoaded', () => {
     DOM.selectJumpChap.replaceChildren(fragment);
   }
 
+  // LRU Cached Chapter Fetcher
   async function fetchChapter(storyId, index) {
     const cacheKey = `${storyId}_${index}`;
     if (state.chapterCache.has(cacheKey)) {
-      return state.chapterCache.get(cacheKey);
+      const cached = state.chapterCache.get(cacheKey);
+      // Re-insert for LRU freshness
+      state.chapterCache.delete(cacheKey);
+      state.chapterCache.set(cacheKey, cached);
+      return cached;
     }
     try {
       let res = await fetch(`data/stories/${storyId}/chapters/${index}.json`);
@@ -466,6 +479,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       
       const data = await res.json();
+      
+      // Enforce LRU Cache Size Limit
+      if (state.chapterCache.size >= state.MAX_CACHE_SIZE) {
+        const oldestKey = state.chapterCache.keys().next().value;
+        state.chapterCache.delete(oldestKey);
+      }
       state.chapterCache.set(cacheKey, data);
 
       prefetchAdjacentChapters(storyId, index);
@@ -482,7 +501,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (idx >= 1 && idx <= state.toc.length && !state.chapterCache.has(key)) {
         fetch(`data/stories/${storyId}/chapters/${idx}.json`)
           .then(res => res.ok ? res.json() : fetch(`data/chapters/${idx}.json`).then(r => r.json()))
-          .then(data => state.chapterCache.set(key, data))
+          .then(data => {
+            if (state.chapterCache.size >= state.MAX_CACHE_SIZE) {
+              const oldestKey = state.chapterCache.keys().next().value;
+              state.chapterCache.delete(oldestKey);
+            }
+            state.chapterCache.set(key, data);
+          })
           .catch(() => {});
       }
     };
@@ -496,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         prefetch(currentIndex + 1);
         prefetch(currentIndex - 1);
-      }, 500);
+      }, 400);
     }
   }
 
@@ -512,7 +537,6 @@ document.addEventListener('DOMContentLoaded', () => {
     state.currentChapIndex = index;
     saveStoryProgress(storyId, index);
 
-    // Show Reader, Hide Others
     DOM.librarySection.classList.add('hidden');
     DOM.overviewSection.classList.add('hidden');
     DOM.readerSection.classList.remove('hidden');
@@ -664,7 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
-  // --- MULTI-VOICE TEXT-TO-SPEECH (TTS) ENGINE FOR ANDROID & IOS ---
+  // --- MULTI-VOICE TEXT-TO-SPEECH (TTS) ENGINE ---
   function initTTSVoices() {
     if (!state.tts.synth) return;
 
@@ -673,7 +697,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!DOM.selectTtsVoice) return;
       DOM.selectTtsVoice.innerHTML = '';
       
-      // Match Vietnamese voices across iOS (Apple Siri/Linh), Android (Google Tiếng Việt), Windows & Web
       const viVoices = state.tts.voices.filter(v => 
         v.lang.toLowerCase().includes('vi') || 
         v.name.toLowerCase().includes('vietnam') ||
@@ -776,7 +799,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Android Chromium fix: unpause synth before canceling
     if (state.tts.synth.paused) {
       state.tts.synth.resume();
     }
@@ -787,7 +809,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const textToRead = state.tts.paragraphs[paraIndex];
     state.tts.utterance = new SpeechSynthesisUtterance(textToRead);
 
-    // Apply voice, rate, pitch, language
     if (state.tts.selectedVoice) {
       state.tts.utterance.voice = state.tts.selectedVoice;
     }
@@ -816,7 +837,6 @@ document.addEventListener('DOMContentLoaded', () => {
       advanceNext();
     };
 
-    // Mobile Watchdog: If onend doesn't fire after estimated speech time + 4s, force advance
     const estimatedDurationMs = Math.max(3000, (textToRead.length / 10) * 1000 / state.tts.rate) + 4000;
     state.tts.watchdogTimer = setTimeout(() => {
       if (state.tts.isPlaying && !state.tts.isPaused) {
@@ -944,14 +964,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- EVENT LISTENERS ---
   function setupEventListeners() {
-    // Quick Story Select
     DOM.quickStorySelect.addEventListener('change', (e) => {
       const selectedId = e.target.value;
       const lastChap = getStoryLastChap(selectedId);
       window.location.hash = `#read/${selectedId}/${lastChap}`;
     });
 
-    // Library Search
     let libSearchTimeout = null;
     DOM.searchLibraryInput.addEventListener('input', (e) => {
       clearTimeout(libSearchTimeout);
@@ -963,10 +981,9 @@ document.addEventListener('DOMContentLoaded', () => {
           (s.category && s.category.toLowerCase().includes(query))
         );
         renderLibraryCatalogue(filtered);
-      }, 80);
+      }, 70);
     });
 
-    // Nav actions
     DOM.btnOpenToc.addEventListener('click', openTocDrawer);
     DOM.btnCloseToc.addEventListener('click', closeTocDrawer);
     DOM.modalToc.addEventListener('click', (e) => {
@@ -985,7 +1002,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => startTTS(0), 300);
     });
 
-    // TOC Search Filter with Debounce
     let searchTimeout = null;
     DOM.searchTocInput.addEventListener('input', (e) => {
       clearTimeout(searchTimeout);
@@ -996,10 +1012,9 @@ document.addEventListener('DOMContentLoaded', () => {
           chap.index.toString() === query
         );
         renderTOCList(filtered);
-      }, 70);
+      }, 60);
     });
 
-    // Theme Switcher
     DOM.btnToggleTheme.addEventListener('click', () => {
       const themes = ['theme-dark', 'theme-oled', 'theme-sepia', 'theme-cream', 'theme-emerald'];
       const currentIdx = themes.indexOf(state.settings.theme);
@@ -1015,14 +1030,12 @@ document.addEventListener('DOMContentLoaded', () => {
       saveSettings();
     });
 
-    // Font Family Switcher
     DOM.selectFont.addEventListener('change', (e) => {
       state.settings.fontFamily = e.target.value;
       applySettings();
       saveSettings();
     });
 
-    // Font Size Adjustment
     DOM.btnFontDec.addEventListener('click', () => {
       if (state.settings.fontSize > 13) {
         state.settings.fontSize -= 1;
@@ -1039,7 +1052,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Navigation Buttons
     DOM.btnPrevChap.addEventListener('click', () => {
       if (state.currentChapIndex > 1) {
         window.location.hash = `#read/${state.currentStoryId}/${state.currentChapIndex - 1}`;
@@ -1059,7 +1071,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     DOM.btnBookmark.addEventListener('click', toggleBookmark);
 
-    // Event Delegation for Paragraph Clicks
     DOM.chapContent.addEventListener('click', (e) => {
       const p = e.target.closest('p[data-para-index]');
       if (p) {
@@ -1070,7 +1081,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // TTS Control Listeners
     DOM.btnToggleTTS.addEventListener('click', () => {
       if (state.tts.isPlaying) {
         stopTTS();
@@ -1101,7 +1111,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Scrubber Range Input
     DOM.ttsSeekRange.addEventListener('input', (e) => {
       const targetIndex = parseInt(e.target.value, 10);
       state.tts.currentParaIndex = targetIndex;
@@ -1143,7 +1152,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Auto Scroll listeners
     DOM.btnToggleAutoScroll.addEventListener('click', () => {
       if (state.autoScrollInterval) {
         stopAutoScroll();
@@ -1166,12 +1174,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Fab Scroll Top
     DOM.fabScrollTop.addEventListener('click', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 

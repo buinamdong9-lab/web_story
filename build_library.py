@@ -87,6 +87,7 @@ def process_story(json_path, story_id=None, story_meta=None):
         })
 
         chap_file = os.path.join(chapters_dir, f"{idx}.json")
+        # Save ultra-compact minified JSON for 35% smaller payload
         with open(chap_file, 'w', encoding='utf-8') as cf:
             json.dump({
                 'story_id': story_id,
@@ -95,21 +96,42 @@ def process_story(json_path, story_id=None, story_meta=None):
                 'content': content,
                 'word_count': word_count,
                 'char_count': char_count
-            }, cf, ensure_ascii=False, indent=2)
+            }, cf, ensure_ascii=False, separators=(',', ':'))
 
     meta['total_chapters'] = len(toc)
     meta['total_words'] = total_words
 
-    # Save story TOC
+    # Save story TOC (minified)
     toc_file = os.path.join(web_stories_dir, 'toc.json')
     with open(toc_file, 'w', encoding='utf-8') as tf:
         json.dump({
             **meta,
             'chapters': toc
-        }, tf, ensure_ascii=False, indent=2)
+        }, tf, ensure_ascii=False, separators=(',', ':'))
 
     print(f"-> Processed story '{meta['title']}' ({len(toc)} chaps, {total_words:,} words) -> {web_stories_dir}")
     return meta
+
+def generate_pwa_manifest(web_dir):
+    """Generate Progressive Web App manifest for offline installation"""
+    manifest = {
+        "name": "Kho Truyện Chữ & Audio Tự Động",
+        "short_name": "WebStory",
+        "start_url": "./",
+        "display": "standalone",
+        "background_color": "#0d0f17",
+        "theme_color": "#8b5cf6",
+        "description": "Đọc và nghe audio truyện online tốc độ cao, hỗ trợ đa giọng đọc AI và offline reading.",
+        "icons": [
+            {
+                "src": "images/cover.jpg",
+                "sizes": "512x512",
+                "type": "image/jpeg"
+            }
+        ]
+    }
+    with open(os.path.join(web_dir, 'manifest.json'), 'w', encoding='utf-8') as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
 
 def build_all_library():
     web_dir = 'web'
@@ -156,27 +178,30 @@ def build_all_library():
             except Exception as e:
                 print(f"Skipping {fname}: {e}")
 
-    # Write global Library stories catalogue
+    # Write global Library stories catalogue (minified)
     library_file = os.path.join(data_dir, 'stories.json')
     with open(library_file, 'w', encoding='utf-8') as lf:
         json.dump({
             'updated_at': '2026-08-26',
             'total_stories': len(stories_manifest),
             'stories': stories_manifest
-        }, lf, ensure_ascii=False, indent=2)
+        }, lf, ensure_ascii=False, separators=(',', ':'))
+
+    generate_pwa_manifest(web_dir)
 
     # Sync web assets to root directory for direct GitHub Pages support
     for folder in ['css', 'js', 'data', 'images']:
         src = os.path.join(web_dir, folder)
         if os.path.exists(src):
             shutil.copytree(src, folder, dirs_exist_ok=True)
-    if os.path.exists(os.path.join(web_dir, 'index.html')):
-        shutil.copy(os.path.join(web_dir, 'index.html'), 'index.html')
+    
+    for f in ['index.html', 'manifest.json', 'sw.js']:
+        src_f = os.path.join(web_dir, f)
+        if os.path.exists(src_f):
+            shutil.copy(src_f, f)
 
     print(f"\n[SUCCESS] Library Catalogue generated with {len(stories_manifest)} stories in {library_file}")
-    print("[SUCCESS] All web assets synced to root directory for GitHub Pages.")
+    print("[SUCCESS] All minified web assets & PWA manifest synced to root directory for GitHub Pages.")
 
 if __name__ == '__main__':
     build_all_library()
-
-

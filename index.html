@@ -5,8 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kho Truyện Chữ & Audio Tự Động Online</title>
   <meta name="description" content="Nền tảng đọc và nghe truyện audio tự động AI tốc độ cao, hỗ trợ nhiều bộ truyện, giao diện tối ưu đa thiết bị, lưu tiến độ đọc thông minh.">
-  <link rel="stylesheet" href="css/style.css">
+  <meta name="theme-color" content="#8b5cf6">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Preconnect Fonts for Zero-Latency Font Loading -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- PWA Manifest & App Icon -->
+  <link rel="manifest" href="manifest.json">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+  <link rel="apple-touch-icon" href="images/cover.jpg">
+  
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="theme-dark">
 
@@ -428,5 +441,14 @@
   </footer>
 
   <script src="js/app.js"></script>
+  
+  <!-- Service Worker Registration for Offline Reading & Zero-Latency Cache -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW reg error:', err));
+      });
+    }
+  </script>
 </body>
 </html>
