@@ -31,9 +31,12 @@ Dự án là nền tảng web tĩnh đọc truyện chữ và nghe audio AI tố
 │           ├── toc.json       # Mục lục riêng của truyện
 │           └── chapters/      # 102 file chương độc lập (1.json -> 102.json)
 │
+├── deploy.py                  # 🚀 1-CLICK DEPLOY: Tự động Build, Health Check và Push GitHub
 ├── build_library.py           # SCRIPT TỰ ĐỘNG: Quét truyện, nén JSON, sinh PWA manifest & sync root
+├── add_story.py               # SCRIPT NHẬP TRUYỆN: Làm sạch text, gán metadata và nhập vào thư viện
+├── health_check.py            # SCRIPT KIỂM TRA: Quét tính toàn vẹn của dữ liệu và các chương
+├── export_ebook.py            # SCRIPT XUẤT EBOOK: Gộp toàn bộ truyện thành file Markdown / TXT duy nhất
 ├── clean_utils.py             # Bộ công cụ lọc và làm sạch văn bản rác khi crawl truyện
-├── clean_existing_datasets.py # Script xử lý làm sạch các dataset đã crawl
 └── web/                       # Thư mục chứa web assets gốc (tự động đồng bộ ra root)
 ```
 
@@ -73,38 +76,55 @@ Dự án là nền tảng web tĩnh đọc truyện chữ và nghe audio AI tố
 
 ---
 
-## 🛠️ 4. HƯỚNG DẪN VẬN HÀNH DẠNG SCRIPT (PLAYBOOK)
+## 🛠️ 4. HƯỚNG DẪN BỘ SCRIPTS VẬN HÀNH (CLI TOOLKIT PLAYBOOK)
 
-### 📌 Kịch bản 1: Thêm một hoặc nhiều bộ truyện mới vừa crawl
+### 📌 1. Triển Khai Nhanh 1-Click (1-Click Auto Deploy):
 ```bash
-# Bước 1: Đặt file JSON truyện đã crawl vào thư mục gốc (ví dụ: Dau_Pha_Thuong_Khung.json)
-# File JSON có thể là dạng list các chương [{"title": "Chương 1...", "content": "..."}]
-
-# Bước 2: Chạy script tự động đóng gói & nén thư viện:
-python build_library.py
-
-# Bước 3: Đẩy bản cập nhật lên GitHub Pages:
-git add .
-git commit -m "feat: cập nhật bộ truyện mới vào thư viện"
-git push
+# Tự động đóng gói, nén JSON, kiểm tra lỗi toàn vẹn và đẩy lên GitHub Pages:
+python deploy.py "feat: cập nhật hệ thống và dữ liệu"
 ```
-*(Web online tại `https://buinamdong9-lab.github.io/web_story/` sẽ tự động hiển thị bộ truyện mới)*
 
 ---
 
-### 📌 Kịch bản 2: Chạy thử nghiệm máy chủ tại máy cục bộ (Localhost)
+### 📌 2. Nhập & Làm Sạch Truyện Mới Vào Thư Viện (`add_story.py`):
 ```bash
-# Chạy HTTP Server tại thư mục web:
+# Nhập file JSON truyện crawl với đầy đủ thông tin metadata:
+python add_story.py --json story.json --title "Đấu Phá Thương Khung" --author "Thiên Tằm Thổ Đậu" --category "Tiên Hiệp, Dị Giới" --desc "Tóm tắt truyện..."
+```
+
+---
+
+### 📌 3. Kiểm Tra Toàn Vẹn Dữ Liệu (`health_check.py`):
+```bash
+# Quét toàn bộ thư viện, kiểm tra số chương, số từ và ảnh bìa:
+python health_check.py
+```
+
+---
+
+### 📌 4. Xuất Truyện Ra File Ebook Độc Lập (`export_ebook.py`):
+```bash
+# Xuất truyện thành file Markdown duy nhất để lưu trữ / đọc offline:
+python export_ebook.py --id than_nu_tieu_dao_luc --format md --out Than_Nu_Full.md
+
+# Hoặc xuất thành file Text (.txt):
+python export_ebook.py --id than_nu_tieu_dao_luc --format txt --out Than_Nu_Full.txt
+```
+
+---
+
+### 📌 5. Đóng Gói Thủ Công & Đồng Bộ Toàn Bộ Thư Viện (`build_library.py`):
+```bash
+# Quét tất cả file JSON truyện trong thư mục, nén minified và đồng bộ sang root:
+python build_library.py
+```
+
+---
+
+### 📌 6. Chạy Máy Chủ Thử Nghiệm Tại Máy Cục Bộ (Localhost):
+```bash
+# Khởi chạy HTTP Server trên cổng 8080:
 python -m http.server 8080 --directory web
 
-# Mở trình duyệt truy cập:
-# http://localhost:8080
-```
-
----
-
-### 📌 Kịch bản 3: Làm sạch dữ liệu văn bản rác của truyện crawl
-```bash
-# Sử dụng module clean_utils.py để lọc các câu quảng cáo, link web, dấu phân cách thừa:
-python clean_existing_datasets.py
+# Mở trình duyệt: http://localhost:8080
 ```
