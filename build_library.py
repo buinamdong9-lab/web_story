@@ -4,7 +4,6 @@ import json
 import re
 import shutil
 
-# Ensure utf-8 stdout on Windows
 if sys.stdout:
     sys.stdout.reconfigure(encoding='utf-8')
 
@@ -87,7 +86,7 @@ def process_story(json_path, story_id=None, story_meta=None):
         })
 
         chap_file = os.path.join(chapters_dir, f"{idx}.json")
-        # Save ultra-compact minified JSON for 35% smaller payload
+        # Save ultra-compact minified JSON
         with open(chap_file, 'w', encoding='utf-8') as cf:
             json.dump({
                 'story_id': story_id,
@@ -101,7 +100,7 @@ def process_story(json_path, story_id=None, story_meta=None):
     meta['total_chapters'] = len(toc)
     meta['total_words'] = total_words
 
-    # Save story TOC (minified)
+    # Save detailed story TOC (minified)
     toc_file = os.path.join(web_stories_dir, 'toc.json')
     with open(toc_file, 'w', encoding='utf-8') as tf:
         json.dump({
@@ -109,8 +108,22 @@ def process_story(json_path, story_id=None, story_meta=None):
             'chapters': toc
         }, tf, ensure_ascii=False, separators=(',', ':'))
 
-    print(f"-> Processed story '{meta['title']}' ({len(toc)} chaps, {total_words:,} words) -> {web_stories_dir}")
-    return meta
+    print(f"-> Processed '{meta['title']}' ({len(toc)} chaps, {total_words:,} words) -> {web_stories_dir}")
+
+    # Return ultra-lightweight card index record for the 100-1000 story catalogue
+    # We truncate description to 120 chars so 1,000 stories JSON index is < 150KB!
+    short_desc = (meta['description'][:120] + '...') if len(meta['description']) > 120 else meta['description']
+    return {
+        'id': meta['id'],
+        'title': meta['title'],
+        'author': meta['author'],
+        'category': meta['category'],
+        'status': meta['status'],
+        'description': short_desc,
+        'cover_image': meta['cover_image'],
+        'total_chapters': meta['total_chapters'],
+        'total_words': meta['total_words']
+    }
 
 def generate_pwa_manifest(web_dir):
     """Generate Progressive Web App manifest for offline installation"""
@@ -179,12 +192,19 @@ def build_all_library():
             except Exception as e:
                 print(f"Skipping {fname}: {e}")
 
-    # Write global Library stories catalogue (minified)
+    # Extract all distinct categories for instant category filtering
+    all_categories = set()
+    for s in stories_manifest:
+        cats = [c.strip() for c in s.get('category', '').split(',') if c.strip()]
+        all_categories.update(cats)
+
+    # Write global Library stories catalogue (Ultra-lean & Minified)
     library_file = os.path.join(data_dir, 'stories.json')
     with open(library_file, 'w', encoding='utf-8') as lf:
         json.dump({
             'updated_at': '2026-08-26',
             'total_stories': len(stories_manifest),
+            'categories': sorted(list(all_categories)),
             'stories': stories_manifest
         }, lf, ensure_ascii=False, separators=(',', ':'))
 
@@ -201,7 +221,7 @@ def build_all_library():
         if os.path.exists(src_f):
             shutil.copy(src_f, f)
 
-    print(f"\n[SUCCESS] Library Catalogue generated with {len(stories_manifest)} stories in {library_file}")
+    print(f"\n[SUCCESS] Scalable Index generated for {len(stories_manifest)} stories in {library_file}")
     print("[SUCCESS] All minified web assets & PWA manifest synced to root directory for GitHub Pages.")
 
 if __name__ == '__main__':

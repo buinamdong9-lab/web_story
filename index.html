@@ -81,14 +81,14 @@
   <!-- Main Application Wrapper -->
   <main class="main-wrapper">
 
-    <!-- 1. MULTI-STORY LIBRARY VIEW (Tủ Sách / Thư Viện Toàn Bộ Truyện) -->
+    <!-- 1. MULTI-STORY LIBRARY VIEW (Tủ Sách Hỗ Trợ 100 - 1000 Bộ Truyện) -->
     <section class="library-section" id="librarySection">
       <div class="container">
         
         <!-- Library Banner -->
         <div class="library-header-banner">
           <div class="library-banner-content">
-            <h1 class="library-main-title">Thư Viện Truyện Chữ & Audio</h1>
+            <h1 class="library-main-title">Thư Viện Truyện Chữ & Audio AI</h1>
             <p class="library-subtitle">Đọc truyện mượt mà, hỗ trợ nghe giọng đọc AI đa âm sắc và thanh tua tiện lợi</p>
             
             <div class="library-search-wrapper">
@@ -96,7 +96,7 @@
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <input type="text" class="search-input" id="searchLibraryInput" placeholder="Tìm tên truyện, tác giả, thể loại...">
+              <input type="text" class="search-input" id="searchLibraryInput" placeholder="Tìm nhanh trong kho truyện...">
             </div>
           </div>
         </div>
@@ -115,18 +115,47 @@
           </div>
         </div>
 
+        <!-- Filter & Sorting Controls for High-Scale Library -->
+        <div class="library-filters-bar">
+          <div class="category-pills-wrapper" id="categoryPillsWrapper">
+            <button class="cat-pill active" data-category="all">Tất Cả</button>
+            <!-- Categories populated dynamically -->
+          </div>
+
+          <div class="filter-sort-box">
+            <select class="select-input" id="selectStorySort" title="Sắp xếp danh sách truyện">
+              <option value="default">✨ Mặc định</option>
+              <option value="chaps_desc">📚 Nhiều chương nhất</option>
+              <option value="words_desc">📝 Nhiều chữ nhất</option>
+              <option value="title_asc">🔤 Tên truyện A-Z</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Story Catalogue Grid -->
         <div class="catalogue-container">
-          <h2 class="section-heading">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-            Toàn Bộ Tủ Truyện (<span id="totalStoriesBadge">0</span>)
-          </h2>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 class="section-heading" style="margin-bottom: 0;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+              Danh Mục Truyện (<span id="showingStoriesCount">0</span>/<span id="totalStoriesBadge">0</span>)
+            </h2>
+          </div>
           
           <div class="story-catalogue-grid" id="storiesGrid">
             <!-- Populated via JS -->
+          </div>
+
+          <!-- Pagination / Load More Button for 100-1000 Stories -->
+          <div class="load-more-container hidden" id="loadMoreContainer" style="text-align: center; margin-top: 36px;">
+            <button class="btn-secondary" id="btnLoadMoreStories" style="padding: 12px 28px; font-size: 0.95rem; font-weight: 600;">
+              <span>Xem Thêm Truyện Khác</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -435,7 +464,7 @@
   <!-- App Footer -->
   <footer class="app-footer">
     <div class="container">
-      <p><strong>Kho Truyện Chữ & Audio Tự Động Online</strong> • Tối ưu đa thiết bị & tốc độ cao</p>
+      <p><strong>Kho Truyện Chữ & Audio Tự Động Online</strong> • Tối ưu quy mô lớn 100 - 1.000 bộ truyện</p>
       <p style="margin-top: 6px; opacity: 0.7;">Tự động lưu tiến độ • Trải nghiệm mượt mà không quảng cáo</p>
     </div>
   </footer>

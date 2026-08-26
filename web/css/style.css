@@ -318,7 +318,7 @@ body {
 }
 
 /* ==========================================================================
-   1. MULTI-STORY LIBRARY CATALOGUE STYLES
+   1. MULTI-STORY LIBRARY CATALOGUE STYLES (Scale 100 - 1000 Stories)
    ========================================================================== */
 
 .library-section {
@@ -330,7 +330,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 36px 28px;
-  margin-bottom: 36px;
+  margin-bottom: 28px;
   text-align: center;
   position: relative;
   overflow: hidden;
@@ -370,6 +370,57 @@ body {
   color: var(--accent-color);
 }
 
+/* Category Filter Pills & Sort Bar */
+.library-filters-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.category-pills-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  max-width: 100%;
+}
+
+.category-pills-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.cat-pill {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.cat-pill:hover {
+  border-color: var(--accent-color);
+  color: var(--text-heading);
+}
+
+.cat-pill.active {
+  background: var(--accent-color);
+  color: #ffffff;
+  border-color: var(--accent-color);
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.35);
+}
+
 /* Recent Shelf Grid */
 .recent-shelf-container {
   margin-bottom: 40px;
@@ -392,6 +443,7 @@ body {
   transition: all var(--transition-fast);
   text-decoration: none;
   color: inherit;
+  contain: content;
 }
 
 .recent-card:hover {
@@ -446,6 +498,7 @@ body {
   text-decoration: none;
   color: inherit;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  contain: content;
 }
 
 .story-card:hover {
