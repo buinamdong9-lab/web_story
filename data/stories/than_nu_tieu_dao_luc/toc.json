@@ -1,0 +1,626 @@
+{
+  "id": "than_nu_tieu_dao_luc",
+  "title": "Thần Nữ Tiêu Dao Lục",
+  "original_title": "神女逍遥录",
+  "author": "Vô Danh",
+  "category": "Tiên Hiệp, Huyền Huyễn, Tu Chân, Hậu Cung, Sắc Hiệp",
+  "status": "Hoàn Thành",
+  "description": "Tại rìa bắc đại lục, đỉnh tuyết sơn sừng sững chín tầng mây có Thiên Cơ Các thần bí. Truyền thuyết kể rằng nơi đây cất giấu Thiên Mệnh Bảng và Mỹ Nhân Bảng. Thiếu niên Tô Lan mười sáu tuổi tại thôn Triều Sinh vô tình có được một thiên pháp môn tu đạo thâm áo trong nội thị tâm hải, mở ra hành trình kỳ duyên giữa Long tộc cấm địa và các tuyệt sắc thần nữ tiên tử...",
+  "cover_image": "images/than_nu_tieu_dao_luc_cover.jpg",
+  "total_chapters": 102,
+  "total_words": 445599,
+  "chapters": [
+    {
+      "index": 1,
+      "title": "Tựa: Thiên Cơ",
+      "char_count": 5773,
+      "word_count": 1292
+    },
+    {
+      "index": 2,
+      "title": "Chương 1: Dậy Sóng Gió",
+      "char_count": 13734,
+      "word_count": 3024
+    },
+    {
+      "index": 3,
+      "title": "Chương 2: Trò Chơi Tiêu Hồn",
+      "char_count": 16954,
+      "word_count": 3688
+    },
+    {
+      "index": 4,
+      "title": "Chương 3: Tiên Sư Giáng Lâm",
+      "char_count": 17372,
+      "word_count": 3858
+    },
+    {
+      "index": 5,
+      "title": "Chương 4: Đêm Tới Dâm Khách (1)",
+      "char_count": 17842,
+      "word_count": 3900
+    },
+    {
+      "index": 6,
+      "title": "Chương 5: Đêm Tới Dâm Khách (2)",
+      "char_count": 18561,
+      "word_count": 4056
+    },
+    {
+      "index": 7,
+      "title": "Chương 6: Chân Diện Mục Của Xích Tùng Đạo Nhân",
+      "char_count": 20594,
+      "word_count": 4510
+    },
+    {
+      "index": 8,
+      "title": "Chương 7: Bị Nhục Nhã Đáng Thương (1)",
+      "char_count": 8805,
+      "word_count": 1955
+    },
+    {
+      "index": 9,
+      "title": "Chương 8: Bị Nhục Nhã Đáng Thương (2)",
+      "char_count": 18195,
+      "word_count": 3968
+    },
+    {
+      "index": 10,
+      "title": "Chương 9: Tiên Thiên Kỳ Bảo —— Nhũ Trân",
+      "char_count": 14436,
+      "word_count": 3191
+    },
+    {
+      "index": 11,
+      "title": "Chương 10: Cùng Tiên Tử Chung Giường (1)",
+      "char_count": 17189,
+      "word_count": 3780
+    },
+    {
+      "index": 12,
+      "title": "Chương 11: Cùng Tiên Tử Chung Giường (2)",
+      "char_count": 16756,
+      "word_count": 3739
+    },
+    {
+      "index": 13,
+      "title": "Chương 12: Mục Tiêu Mới",
+      "char_count": 18837,
+      "word_count": 4161
+    },
+    {
+      "index": 14,
+      "title": "Chương 13: Hạ Lưu Huyền Công",
+      "char_count": 14069,
+      "word_count": 3099
+    },
+    {
+      "index": 15,
+      "title": "Chương 14: Trận Chiến Đầu Tiên Của Tu Hành",
+      "char_count": 14725,
+      "word_count": 3284
+    },
+    {
+      "index": 16,
+      "title": "Chương 15: Vân Thường Tiểu Vũ",
+      "char_count": 16248,
+      "word_count": 3578
+    },
+    {
+      "index": 17,
+      "title": "Chương 16: Sóc Âm Thành",
+      "char_count": 14679,
+      "word_count": 3203
+    },
+    {
+      "index": 18,
+      "title": "Chương 17: Dâm Tặc Xuất Hiện",
+      "char_count": 14850,
+      "word_count": 3251
+    },
+    {
+      "index": 19,
+      "title": "Chương 18: Trận Chiến Thiên Vũ Cảnh",
+      "char_count": 15639,
+      "word_count": 3467
+    },
+    {
+      "index": 20,
+      "title": "Chương 19: Tiểu Vũ Tình Mê",
+      "char_count": 16598,
+      "word_count": 3617
+    },
+    {
+      "index": 21,
+      "title": "Chương 20: Lại Lên Đường",
+      "char_count": 16871,
+      "word_count": 3701
+    },
+    {
+      "index": 22,
+      "title": "Chương 21: Bí Sự Đạo Cung",
+      "char_count": 19834,
+      "word_count": 4382
+    },
+    {
+      "index": 23,
+      "title": "Chương 22: Cuối Cùng Đến Mục Châu Thành",
+      "char_count": 17133,
+      "word_count": 3768
+    },
+    {
+      "index": 24,
+      "title": "Chương 23: Thích",
+      "char_count": 17669,
+      "word_count": 3896
+    },
+    {
+      "index": 25,
+      "title": "Chương 24: Đại Điển Thu Đồ",
+      "char_count": 19366,
+      "word_count": 4273
+    },
+    {
+      "index": 26,
+      "title": "Chương 25: Thử Thách Bắt Đầu",
+      "char_count": 16499,
+      "word_count": 3646
+    },
+    {
+      "index": 27,
+      "title": "Chương 26: Đột Phá Trong Huyễn Cảnh",
+      "char_count": 17196,
+      "word_count": 3797
+    },
+    {
+      "index": 28,
+      "title": "Chương 27: Trận Chiến Thiên Tài",
+      "char_count": 17905,
+      "word_count": 3879
+    },
+    {
+      "index": 29,
+      "title": "Chương 28: Bộc Lộ Thực Lực",
+      "char_count": 18056,
+      "word_count": 3923
+    },
+    {
+      "index": 30,
+      "title": "Chương 29: Sự Đáng Sợ Của Mộ Dung Cô",
+      "char_count": 17359,
+      "word_count": 3835
+    },
+    {
+      "index": 31,
+      "title": "Chương 30: Chiến Thắng Cuối Cùng",
+      "char_count": 19560,
+      "word_count": 4350
+    },
+    {
+      "index": 32,
+      "title": "Chương 31: Ngọc Bội Mê Tông",
+      "char_count": 18347,
+      "word_count": 4035
+    },
+    {
+      "index": 33,
+      "title": "Chương 32: Hạ Thanh Vận Thất Thân (Bản Làm Lại)",
+      "char_count": 32388,
+      "word_count": 7087
+    },
+    {
+      "index": 34,
+      "title": "Chương 33: Sét Đánh Ngang Tai",
+      "char_count": 18442,
+      "word_count": 4074
+    },
+    {
+      "index": 35,
+      "title": "Chương 34: Sư Đồ Và Đạo Lữ",
+      "char_count": 19039,
+      "word_count": 4237
+    },
+    {
+      "index": 36,
+      "title": "Chương 35: Thế Nào Là Kiếm Đạo",
+      "char_count": 20495,
+      "word_count": 4530
+    },
+    {
+      "index": 37,
+      "title": "Chương 36: Thuần Dương Chi Thể",
+      "char_count": 19827,
+      "word_count": 4381
+    },
+    {
+      "index": 38,
+      "title": "Chương 37: Linh Dục Giao Hòa",
+      "char_count": 19669,
+      "word_count": 4340
+    },
+    {
+      "index": 39,
+      "title": "Chương 38: Liêu Huyền",
+      "char_count": 20037,
+      "word_count": 4431
+    },
+    {
+      "index": 40,
+      "title": "Chương 39: Dạo Đêm Mục Châu Thành",
+      "char_count": 17124,
+      "word_count": 3778
+    },
+    {
+      "index": 41,
+      "title": "Chương 40: Âm Dương Tông",
+      "char_count": 17330,
+      "word_count": 3810
+    },
+    {
+      "index": 42,
+      "title": "Chương 41: Dưới Bóng Tối",
+      "char_count": 18649,
+      "word_count": 4108
+    },
+    {
+      "index": 43,
+      "title": "Chương 42: Hiến Thân Nhục Nhã (1)",
+      "char_count": 22187,
+      "word_count": 4926
+    },
+    {
+      "index": 44,
+      "title": "Chương 43: Hiến Thân Nhục Nhã (2)",
+      "char_count": 24246,
+      "word_count": 5329
+    },
+    {
+      "index": 45,
+      "title": "Chương 44: Cảm Giác Được",
+      "char_count": 18303,
+      "word_count": 4054
+    },
+    {
+      "index": 46,
+      "title": "Chương 45: Đau Thấu Tâm Can",
+      "char_count": 22049,
+      "word_count": 4839
+    },
+    {
+      "index": 47,
+      "title": "Chương 46: Biết Được Chân Tướng",
+      "char_count": 19570,
+      "word_count": 4315
+    },
+    {
+      "index": 48,
+      "title": "Chương 47: Giết Tần Túng Long",
+      "char_count": 19943,
+      "word_count": 4402
+    },
+    {
+      "index": 49,
+      "title": "Chương 48: Mới Vào Hoàng Thành",
+      "char_count": 18542,
+      "word_count": 4120
+    },
+    {
+      "index": 50,
+      "title": "Chương 49: Nam Cung Ánh Nguyệt",
+      "char_count": 18840,
+      "word_count": 4192
+    },
+    {
+      "index": 51,
+      "title": "Chương 50: Thiếu Nữ Trong Cổ Tự",
+      "char_count": 19502,
+      "word_count": 4257
+    },
+    {
+      "index": 52,
+      "title": "Chương 51: Thánh Nữ Xuất Hiện",
+      "char_count": 21524,
+      "word_count": 4703
+    },
+    {
+      "index": 53,
+      "title": "Chương 52: Xuân Quang Dưới Váy",
+      "char_count": 22311,
+      "word_count": 4878
+    },
+    {
+      "index": 54,
+      "title": "Chương 53: Đại Hội Bắt Đầu",
+      "char_count": 19208,
+      "word_count": 4202
+    },
+    {
+      "index": 55,
+      "title": "Chương 54: Thực Lực Của Nam Cung Ánh Nguyệt",
+      "char_count": 18748,
+      "word_count": 4102
+    },
+    {
+      "index": 56,
+      "title": "Chương 55: Lai Lịch Của Tư Mộ Đông",
+      "char_count": 20994,
+      "word_count": 4585
+    },
+    {
+      "index": 57,
+      "title": "Chương 56: Tô Lạn Xuất Chiến",
+      "char_count": 19588,
+      "word_count": 4296
+    },
+    {
+      "index": 58,
+      "title": "Chương 57: Huyền Âm Nhập Thể",
+      "char_count": 18928,
+      "word_count": 4060
+    },
+    {
+      "index": 59,
+      "title": "Chương 58: Đêm Trọ Vãn Nguyệt Lầu",
+      "char_count": 24130,
+      "word_count": 5344
+    },
+    {
+      "index": 60,
+      "title": "Chương 59: Hương Vị Của Thục Nữ",
+      "char_count": 20972,
+      "word_count": 4620
+    },
+    {
+      "index": 61,
+      "title": "Chương 60: Sơ Y Nhân",
+      "char_count": 19168,
+      "word_count": 4280
+    },
+    {
+      "index": 62,
+      "title": "Chương 61: Trấn Hải Tam Thức",
+      "char_count": 20508,
+      "word_count": 4473
+    },
+    {
+      "index": 63,
+      "title": "Chương 62: Tần Vô Cực",
+      "char_count": 19355,
+      "word_count": 4274
+    },
+    {
+      "index": 64,
+      "title": "Chương 63: Lại Gặp Thiếu Nữ Váy Trắng",
+      "char_count": 18655,
+      "word_count": 4103
+    },
+    {
+      "index": 65,
+      "title": "Chương 64: Nam Cung Ánh Nguyệt Đấu Tư Mộ Đông",
+      "char_count": 19337,
+      "word_count": 4194
+    },
+    {
+      "index": 66,
+      "title": "Chương 65: Kiếm Đạo Giao Phong",
+      "char_count": 20922,
+      "word_count": 4566
+    },
+    {
+      "index": 67,
+      "title": "Chương 66: Nước Chảy Vô Tình Hoa Tự Rơi",
+      "char_count": 19991,
+      "word_count": 4364
+    },
+    {
+      "index": 68,
+      "title": "Chương 67: Bốn Cường Giả Lộ Diện",
+      "char_count": 20314,
+      "word_count": 4467
+    },
+    {
+      "index": 69,
+      "title": "Chương 68: Chiến Nam Cung Ánh Nguyệt",
+      "char_count": 21794,
+      "word_count": 4755
+    },
+    {
+      "index": 70,
+      "title": "Chương 69: Nhật Nguyệt Tranh Huy",
+      "char_count": 25810,
+      "word_count": 5631
+    },
+    {
+      "index": 71,
+      "title": "Chương 70: Trêu Đùa Nam Cung Ánh Nguyệt",
+      "char_count": 25494,
+      "word_count": 5554
+    },
+    {
+      "index": 72,
+      "title": "Chương 71: Thoáng Qua Kinh Hồng",
+      "char_count": 17310,
+      "word_count": 3852
+    },
+    {
+      "index": 73,
+      "title": "Chương 72: Như Ý Mộng Giới",
+      "char_count": 19644,
+      "word_count": 4267
+    },
+    {
+      "index": 74,
+      "title": "Chương 73: Dâm Nhục Trong Mộng Giới (1)",
+      "char_count": 21527,
+      "word_count": 4699
+    },
+    {
+      "index": 75,
+      "title": "Chương 74: Dâm Nhục Trong Mộng Giới (2)",
+      "char_count": 26354,
+      "word_count": 5810
+    },
+    {
+      "index": 76,
+      "title": "Chương 75: Trận Chiến Cuối Cùng",
+      "char_count": 20258,
+      "word_count": 4453
+    },
+    {
+      "index": 77,
+      "title": "Chương 76: Dã Tâm Của Bạch Thiên Mặc",
+      "char_count": 19260,
+      "word_count": 4258
+    },
+    {
+      "index": 78,
+      "title": "Chương 77: Đoạt Khôi Thủ",
+      "char_count": 18266,
+      "word_count": 4055
+    },
+    {
+      "index": 79,
+      "title": "Chương 78: Thánh Nữ Ban Thưởng",
+      "char_count": 20502,
+      "word_count": 4535
+    },
+    {
+      "index": 80,
+      "title": "Chương 79: Thiên Quân Giáng Lâm",
+      "char_count": 21518,
+      "word_count": 4721
+    },
+    {
+      "index": 81,
+      "title": "Chương 80: Phong Thái Bá Khí",
+      "char_count": 21585,
+      "word_count": 4686
+    },
+    {
+      "index": 82,
+      "title": "Chương 81: Hồng Trần Vô Song",
+      "char_count": 22545,
+      "word_count": 4947
+    },
+    {
+      "index": 83,
+      "title": "Chương 82: Đại Hội Hạ Màn",
+      "char_count": 22326,
+      "word_count": 4888
+    },
+    {
+      "index": 84,
+      "title": "Chương 83: Cảnh Đêm Nồng Nàn",
+      "char_count": 18759,
+      "word_count": 4092
+    },
+    {
+      "index": 85,
+      "title": "Chương 84: Thanh Vận Hậu Đình Lần Đầu Nở Rộ",
+      "char_count": 21280,
+      "word_count": 4678
+    },
+    {
+      "index": 86,
+      "title": "Chương 85: Cách Sông Còn Hát Hậu Đình Hoa (1)",
+      "char_count": 27467,
+      "word_count": 6008
+    },
+    {
+      "index": 87,
+      "title": "Chương 86: Cách Sông Còn Hát Hậu Đình Hoa (2)",
+      "char_count": 19799,
+      "word_count": 4378
+    },
+    {
+      "index": 88,
+      "title": "Chương 87: Gió Yên Lặng Nhưng Sóng Không Lặng",
+      "char_count": 20970,
+      "word_count": 4655
+    },
+    {
+      "index": 89,
+      "title": "Chương 88: Họa Yêu Tộc",
+      "char_count": 30420,
+      "word_count": 6733
+    },
+    {
+      "index": 90,
+      "title": "Chương 89: Ba Nàng Gặp Mặt",
+      "char_count": 23393,
+      "word_count": 5116
+    },
+    {
+      "index": 91,
+      "title": "Chương 90: Trấn Bắc Thành",
+      "char_count": 21105,
+      "word_count": 4682
+    },
+    {
+      "index": 92,
+      "title": "Chương 91: Hồ Nữ Yêu Diễm",
+      "char_count": 20993,
+      "word_count": 4615
+    },
+    {
+      "index": 93,
+      "title": "Chương 92: Lực Chiến Lang Yêu Tu Sĩ",
+      "char_count": 23499,
+      "word_count": 5147
+    },
+    {
+      "index": 94,
+      "title": "Chương 93: Thiên Hồ Thần Phi",
+      "char_count": 26910,
+      "word_count": 5927
+    },
+    {
+      "index": 95,
+      "title": "Chương 94: Mị Ảnh Thiên Huyễn",
+      "char_count": 21011,
+      "word_count": 4579
+    },
+    {
+      "index": 96,
+      "title": "Chương 95: Thiên Mộng Mê Thần Đại Pháp",
+      "char_count": 20779,
+      "word_count": 4577
+    },
+    {
+      "index": 97,
+      "title": "Chương 96: Thịnh Yến Của Dục Mộng (1)",
+      "char_count": 22674,
+      "word_count": 4978
+    },
+    {
+      "index": 98,
+      "title": "Chương 97: Thịnh Yến Của Dục Mộng (2)",
+      "char_count": 25345,
+      "word_count": 5585
+    },
+    {
+      "index": 99,
+      "title": "Chương 98: Thịnh Yến Của Dục Mộng (3)",
+      "char_count": 17037,
+      "word_count": 3751
+    },
+    {
+      "index": 100,
+      "title": "Chương 99: Nam Cung Một Mộng, Ánh Nguyệt Lạc Hồng",
+      "char_count": 28928,
+      "word_count": 6333
+    },
+    {
+      "index": 101,
+      "title": "Chương 100: Ánh Nguyệt Tâm Ý Cuối Cùng Thông Suốt",
+      "char_count": 29410,
+      "word_count": 6426
+    },
+    {
+      "index": 102,
+      "title": "Chương 101: Thần Phi Thải Dương Độn Hư Không",
+      "char_count": 24637,
+      "word_count": 5401
+    }
+  ]
+}

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kho Truyện Chữ & Audio Tự Động Online</title>
+  <meta name="description" content="Nền tảng đọc và nghe truyện audio tự động AI tốc độ cao, hỗ trợ nhiều bộ truyện, giao diện tối ưu đa thiết bị, lưu tiến độ đọc thông minh.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+</head>
+<body class="theme-dark">
+
+  <!-- Header Navbar -->
+  <header class="app-header" id="appHeader">
+    <div class="container nav-wrapper">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <a href="#library" class="brand-logo" id="brandLogo">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          <span id="brandTitle">Kho Truyện</span>
+        </a>
+
+        <!-- Quick Switcher Dropdown (Desktop/Tablet) -->
+        <select class="select-input" id="quickStorySelect" style="display: none; max-width: 200px;" title="Chuyển nhanh bộ truyện">
+          <!-- Story options populated dynamically -->
+        </select>
+      </div>
+
+      <div class="nav-actions">
+        <a href="#library" class="btn-icon" id="btnNavLibrary" title="Thư viện truyện">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </a>
+
+        <button class="btn-icon" id="btnOpenToc" title="Mục lục (Esc)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+
+        <button class="btn-icon" id="btnToggleTheme" title="Đổi chủ đề">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <a href="#reader" class="btn-primary" id="btnNavRead">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span id="navReadText">Đọc Tiếp</span>
+        </a>
+      </div>
+    </div>
+    
+    <!-- Reading Progress Bar -->
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+  </header>
+
+  <!-- Main Application Wrapper -->
+  <main class="main-wrapper">
+
+    <!-- 1. MULTI-STORY LIBRARY VIEW (Tủ Sách / Thư Viện Toàn Bộ Truyện) -->
+    <section class="library-section" id="librarySection">
+      <div class="container">
+        
+        <!-- Library Banner -->
+        <div class="library-header-banner">
+          <div class="library-banner-content">
+            <h1 class="library-main-title">Thư Viện Truyện Chữ & Audio</h1>
+            <p class="library-subtitle">Đọc truyện mượt mà, hỗ trợ nghe giọng đọc AI đa âm sắc và thanh tua tiện lợi</p>
+            
+            <div class="library-search-wrapper">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" class="search-input" id="searchLibraryInput" placeholder="Tìm tên truyện, tác giả, thể loại...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Reading Shelf -->
+        <div class="recent-shelf-container hidden" id="recentShelfContainer">
+          <h2 class="section-heading">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Đang Đọc Dở
+          </h2>
+          <div class="recent-grid" id="recentGrid">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Story Catalogue Grid -->
+        <div class="catalogue-container">
+          <h2 class="section-heading">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            Toàn Bộ Tủ Truyện (<span id="totalStoriesBadge">0</span>)
+          </h2>
+          
+          <div class="story-catalogue-grid" id="storiesGrid">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 2. STORY DETAILS / HERO OVERVIEW -->
+    <section class="story-hero hidden" id="overviewSection">
+      <div class="container">
+        
+        <div style="margin-bottom: 20px;">
+          <a href="#library" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Quay lại Tủ Truyện
+          </a>
+        </div>
+
+        <div class="hero-grid">
+          <div class="cover-wrapper">
+            <img src="images/cover.jpg" alt="Bìa Truyện" class="cover-img" id="heroCover">
+          </div>
+
+          <div class="story-details">
+            <h1 class="story-title" id="storyTitle">Thần Nữ Tiêu Dao Lục</h1>
+            
+            <div class="story-meta-tags" id="storyMetaTags">
+              <span class="tag">Tiên Hiệp</span>
+              <span class="tag">Huyền Huyễn</span>
+              <span class="tag">Trọn Bộ</span>
+            </div>
+
+            <div class="story-stats">
+              <div class="stat-card">
+                <div class="stat-value" id="statTotalChap">102</div>
+                <div class="stat-label">Chương</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statTotalWords">445.6K</div>
+                <div class="stat-label">Từ</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="statStoryStatus">Hoàn Thành</div>
+                <div class="stat-label">Trạng Thái</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value">🎙️ Đa Giọng AI</div>
+                <div class="stat-label">Âm Thanh</div>
+              </div>
+            </div>
+
+            <div class="story-desc">
+              <p id="storyDescText">Đang tải tóm tắt truyện...</p>
+            </div>
+
+            <div class="hero-actions">
+              <button class="btn-primary" id="btnStartRead">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                  <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+                <span id="btnStartReadText">Đọc Từ Chương 1</span>
+              </button>
+
+              <button class="btn-secondary" id="btnHeroListen">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                  <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+                </svg>
+                🎧 Nghe Audio Tự Động
+              </button>
+              
+              <button class="btn-secondary" id="btnHeroToc">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="8" y1="6" x2="21" y2="6"></line>
+                  <line x1="8" y1="12" x2="21" y2="12"></line>
+                  <line x1="8" y1="18" x2="21" y2="18"></line>
+                  <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                  <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                  <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+                Mục Lục Chương
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. CHAPTER READER VIEW -->
+    <section class="reader-container hidden" id="readerSection">
+      <div class="container">
+        
+        <!-- Reader Customization Toolbar -->
+        <div class="reader-toolbar">
+          <div class="tool-group">
+            <span class="tool-label">Giao diện:</span>
+            <select class="select-input" id="selectTheme">
+              <option value="theme-dark">🌙 Ban Đêm (Dark)</option>
+              <option value="theme-oled">🕶️ OLED Đen Tuyền</option>
+              <option value="theme-sepia">📜 Cổ Độc (Sepia)</option>
+              <option value="theme-cream">🥛 Kem Sữa (Cream)</option>
+              <option value="theme-emerald">🌲 Emerald</option>
+            </select>
+          </div>
+
+          <div class="tool-group">
+            <span class="tool-label">Phông chữ:</span>
+            <select class="select-input" id="selectFont">
+              <option value="'Lora', Georgia, serif">Lora (Có chân)</option>
+              <option value="'Merriweather', Georgia, serif">Merriweather</option>
+              <option value="'Be Vietnam Pro', sans-serif">Be Vietnam Pro</option>
+              <option value="'Inter', sans-serif">Inter (Không chân)</option>
+            </select>
+          </div>
+
+          <div class="tool-group">
+            <span class="tool-label">Cỡ chữ:</span>
+            <button class="btn-icon" id="btnFontDec" title="Giảm cỡ chữ">-</button>
+            <span id="fontSizeDisplay" style="font-weight: 600; min-width: 34px; text-align: center;">18px</span>
+            <button class="btn-icon" id="btnFontInc" title="Tăng cỡ chữ">+</button>
+          </div>
+
+          <div class="tool-group">
+            <button class="btn-icon" id="btnToggleTTS" title="Bật/Tắt Đọc Tự Động & Thanh Tua (TTS)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+              </svg>
+            </button>
+            <button class="btn-icon" id="btnToggleAutoScroll" title="Cuộn tự động màn hình">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polygon points="10 8 16 12 10 16 10 8"></polygon>
+              </svg>
+            </button>
+            <button class="btn-icon" id="btnBookmark" title="Đánh dấu trang">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Paper Body -->
+        <article class="reader-paper" id="readerPaper">
+          <header class="chap-header">
+            <div class="chap-number-subtitle" id="chapSubtitle">Chương 1 / 102</div>
+            <h2 class="chap-title" id="chapTitle">Đang tải...</h2>
+            <div class="chap-meta">
+              <span id="chapWordCount">0 từ</span>
+              <span>•</span>
+              <span id="chapEstTime">0 phút đọc</span>
+              <span>•</span>
+              <span style="color: var(--accent-color); font-weight: 500;">💡 Nhấp vào bất kỳ đoạn nào để nghe đọc</span>
+            </div>
+          </header>
+
+          <div class="chap-body" id="chapContent">
+            <!-- Dynamic chapter content paragraphs injected here -->
+          </div>
+
+          <footer class="chap-navigation-bottom">
+            <button class="btn-secondary" id="btnPrevChap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+              Chương Trước
+            </button>
+            
+            <select class="select-input" id="selectJumpChap">
+              <!-- Chapter options populated dynamically -->
+            </select>
+
+            <button class="btn-primary" id="btnNextChap">
+              Chương Sau
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </footer>
+        </article>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Table of Contents Drawer Modal -->
+  <div class="modal-overlay" id="modalToc">
+    <div class="toc-drawer">
+      <div class="drawer-header">
+        <h3 class="drawer-title" id="drawerStoryTitle">Mục Lục Truyện</h3>
+        <button class="btn-icon" id="btnCloseToc">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="search-box">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" class="search-input" id="searchTocInput" placeholder="Tìm số chương hoặc tên chương...">
+        </div>
+      </div>
+
+      <div class="toc-list" id="tocList">
+        <!-- Chapter item links dynamically injected -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Player Floating Bar (TTS Engine Controls with Multi-Voices, Pitch & Scrubber Bar) -->
+  <div class="audio-player-bar hidden" id="audioPlayerBar">
+    <!-- Top Row: Tua / Scrubber Bar -->
+    <div class="audio-scrubber-row">
+      <div class="audio-pulse-indicator" id="ttsPulseIndicator"></div>
+      <span class="audio-para-counter" id="ttsParaCounter">Đoạn 1 / 1</span>
+      
+      <div class="audio-slider-wrapper">
+        <input type="range" class="audio-slider" id="ttsSeekRange" min="0" max="0" value="0" step="1" title="Kéo để tua nhanh đoạn đọc">
+      </div>
+      
+      <span class="audio-progress-percent" id="ttsProgressPercent">0%</span>
+    </div>
+
+    <!-- Bottom Row: Controls & Settings -->
+    <div class="audio-controls-row">
+      <button class="btn-icon" id="btnTtsPrevPara" title="Đoạn trước (Tua lùi)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="11 19 2 12 11 5 11 19"></polygon>
+          <polygon points="22 19 13 12 22 5 22 19"></polygon>
+        </svg>
+      </button>
+
+      <button class="btn-primary" id="btnTtsPlayPause" style="padding: 6px 16px;">
+        <span id="ttsPlayPauseIcon">⏸️</span>
+        <span id="ttsPlayPauseText">Tạm dừng</span>
+      </button>
+
+      <button class="btn-icon" id="btnTtsNextPara" title="Đoạn kế tiếp (Tua tới)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 19 22 12 13 5 13 19"></polygon>
+          <polygon points="2 19 11 12 2 5 2 19"></polygon>
+        </svg>
+      </button>
+
+      <!-- Selection: Preset Profile -->
+      <select class="select-input" id="selectTtsPreset" title="Kiểu Giọng Truyện">
+        <option value="custom">🎭 Tự chọn giọng</option>
+        <option value="male_deep">👨 Giọng Nam Trầm</option>
+        <option value="female_warm">👩 Giọng Nữ Truyền Cảm</option>
+        <option value="storyteller">📻 Radio Đọc Truyện</option>
+      </select>
+
+      <!-- Selection: System / Browser Voices -->
+      <select class="select-input" id="selectTtsVoice" style="max-width: 140px;" title="Danh sách giọng đọc phát hiện">
+        <option value="">Giọng mặc định</option>
+      </select>
+
+      <!-- Selection: Pitch (Tông giọng) -->
+      <select class="select-input" id="selectTtsPitch" title="Tông giọng (Pitch)">
+        <option value="0.75">🔉 Trầm Ấm</option>
+        <option value="1.0" selected>🎵 Chuẩn</option>
+        <option value="1.25">🔊 Trong Trẻo</option>
+      </select>
+
+      <!-- Selection: Speed Rate (Tốc độ đọc) -->
+      <select class="select-input" id="selectTtsSpeed" title="Tốc độ đọc">
+        <option value="0.8">0.8x</option>
+        <option value="1.0" selected>1.0x (Chuẩn)</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2.0">2.0x</option>
+      </select>
+
+      <button class="btn-secondary" id="btnTtsStop" style="padding: 6px 12px; font-size: 0.85rem;" title="Đóng bảng phát âm thanh">Tắt Audio</button>
+    </div>
+  </div>
+
+  <!-- Floating Controls & Scroll to top -->
+  <div class="floating-controls">
+    <button class="fab-btn" id="fabScrollTop" title="Lên đầu trang">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="18 15 12 9 6 15"></polyline>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Auto-scroll Panel -->
+  <div class="autoscroll-bar hidden" id="autoScrollPanel">
+    <span class="tool-label">Tự cuộn:</span>
+    <button class="btn-icon" id="btnAutoScrollDec">-</button>
+    <span id="autoScrollSpeedText" style="font-weight: bold;">Tốc độ: 2</span>
+    <button class="btn-icon" id="btnAutoScrollInc">+</button>
+    <button class="btn-primary" id="btnAutoScrollStop" style="padding: 6px 14px;">Dừng</button>
+  </div>
+
+  <!-- App Footer -->
+  <footer class="app-footer">
+    <div class="container">
+      <p><strong>Kho Truyện Chữ & Audio Tự Động Online</strong> • Tối ưu đa thiết bị & tốc độ cao</p>
+      <p style="margin-top: 6px; opacity: 0.7;">Tự động lưu tiến độ • Trải nghiệm mượt mà không quảng cáo</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
