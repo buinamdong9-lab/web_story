@@ -169,7 +169,8 @@ def build_all_library():
     for fname in os.listdir('.'):
         if fname.endswith('.json') and fname not in [
             'Than_Nu_Tieu_Dao_Luc.json', 'all_chapters_crawled.json', 
-            'fast_crawl_results.json', 'full_story_batch.json'
+            'fast_crawl_results.json', 'full_story_batch.json',
+            'manifest.json', 'package.json', 'package-lock.json', 'tsconfig.json'
         ]:
             try:
                 sid = slugify(os.path.splitext(fname)[0])
