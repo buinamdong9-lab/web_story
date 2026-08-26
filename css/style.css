@@ -719,6 +719,55 @@ body {
   display: none;
 }
 
+/* Reading Scrubber Card */
+.reading-scrubber-card {
+  max-width: var(--reader-max-width);
+  margin: 0 auto 20px auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.reading-scrubber-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scrubber-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.scrubber-counter-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--accent-light);
+  color: var(--accent-color);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.scrubber-percent-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-color);
+}
+
+.reading-slider-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
 .tool-group {
   display: flex;
   align-items: center;

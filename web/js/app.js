@@ -1,6 +1,7 @@
 /**
- * WebStory Core Engine - Scalable Architecture for 100 - 1,000+ Novels
- * High-Scale Features:
+ * WebStory Core Engine - High-Performance Mobile & Desktop PWA Reader
+ * Features:
+ * - Dual-Mode Visual Reading & Audio TTS Scrubber Bar (Real-time seeking)
  * - Chunked/Paginated DOM Rendering (24 stories/batch) for 60fps scrolling
  * - Category Filtering & Multi-Criteria Sorting Engine
  * - Token-based Fast Search (sub-2ms search over 1,000 stories)
@@ -25,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     storyMeta: null,
     toc: [],
     currentChapIndex: 1,
-    chapterCache: new Map(), // LRU Cache capped at 60 chapters
+    chapterCache: new Map(),
     MAX_CACHE_SIZE: 60,
     autoScrollInterval: null,
     autoScrollSpeed: 2,
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     isHeaderHidden: false,
     wakeLock: null,
     deferredPrompt: null,
+    isSeekingManually: false,
     bookmarks: JSON.parse(localStorage.getItem('tn_bookmarks') || '[]'),
     readingHistory: JSON.parse(localStorage.getItem('tn_reading_history') || '[]'),
     settings: {
@@ -108,8 +110,12 @@ document.addEventListener('DOMContentLoaded', () => {
     btnHeroListen: document.getElementById('btnHeroListen'),
     btnHeroToc: document.getElementById('btnHeroToc'),
     
-    // Reader Section
+    // Reader Section & Permanent Reading Scrubber
     readerSection: document.getElementById('readerSection'),
+    readingScrubberCard: document.getElementById('readingScrubberCard'),
+    readingSeekRange: document.getElementById('readingSeekRange'),
+    scrubberParaDisplay: document.getElementById('scrubberParaDisplay'),
+    scrubberPercentDisplay: document.getElementById('scrubberPercentDisplay'),
     chapSubtitle: document.getElementById('chapSubtitle'),
     chapTitle: document.getElementById('chapTitle'),
     chapWordCount: document.getElementById('chapWordCount'),
@@ -146,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
     selectTtsPitch: document.getElementById('selectTtsPitch'),
     btnTtsStop: document.getElementById('btnTtsStop'),
 
-    // Floating
+    // Floating Buttons
+    fabToggleScrubber: document.getElementById('fabToggleScrubber'),
     fabScrollTop: document.getElementById('fabScrollTop')
   };
 
@@ -287,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', warmup, { passive: true, once: true });
   }
 
-  // --- HIGH-SCALE LIBRARY CATALOGUE ENGINE (100 - 1,000 NOVELS) ---
+  // --- HIGH-SCALE LIBRARY CATALOGUE ENGINE ---
   async function loadLibraryStories() {
     try {
       const res = await fetch('data/stories.json');
@@ -390,12 +397,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = (DOM.searchLibraryInput.value || '').toLowerCase().trim();
     let result = state.stories;
 
-    // 1. Filter by Category
     if (state.selectedCategory !== 'all') {
       result = result.filter(s => (s.category || '').includes(state.selectedCategory));
     }
 
-    // 2. Filter by Search Query
     if (query) {
       result = result.filter(s => 
         s.title.toLowerCase().includes(query) || 
@@ -404,7 +409,6 @@ document.addEventListener('DOMContentLoaded', () => {
       );
     }
 
-    // 3. Apply Sorting
     if (state.sortMode === 'chaps_desc') {
       result = [...result].sort((a, b) => (b.total_chapters || 0) - (a.total_chapters || 0));
     } else if (state.sortMode === 'words_desc') {
@@ -420,7 +424,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderNextStoryBatch();
   }
 
-  // Paginated/Chunked Rendering of 24 Cards for Ultra Smooth 60fps DOM
   function renderNextStoryBatch() {
     const startIndex = state.renderedStoriesCount;
     const nextBatch = state.filteredStories.slice(startIndex, startIndex + state.BATCH_SIZE);
@@ -464,7 +467,6 @@ document.addEventListener('DOMContentLoaded', () => {
     state.renderedStoriesCount += nextBatch.length;
     DOM.showingStoriesCount.textContent = state.renderedStoriesCount;
 
-    // Show or hide "Load More" button
     if (state.renderedStoriesCount < state.filteredStories.length) {
       DOM.loadMoreContainer.classList.remove('hidden');
     } else {
@@ -662,12 +664,18 @@ document.addEventListener('DOMContentLoaded', () => {
     state.tts.paragraphs = paragraphs;
     state.tts.currentParaIndex = 0;
 
+    // Initialize both Reading Scrubber and Audio Scrubber Sliders
+    if (DOM.readingSeekRange) {
+      DOM.readingSeekRange.min = 0;
+      DOM.readingSeekRange.max = Math.max(0, paragraphs.length - 1);
+      DOM.readingSeekRange.value = 0;
+    }
     if (DOM.ttsSeekRange) {
       DOM.ttsSeekRange.min = 0;
       DOM.ttsSeekRange.max = Math.max(0, paragraphs.length - 1);
       DOM.ttsSeekRange.value = 0;
     }
-    updateScrubberUI();
+    updateScrubberUI(0);
 
     DOM.btnPrevChap.disabled = (index <= 1);
     DOM.btnNextChap.disabled = (index >= state.toc.length);
@@ -905,7 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.tts.utterance.lang = 'vi-VN';
 
     highlightParagraph(paraIndex);
-    updateScrubberUI();
+    updateScrubberUI(paraIndex);
     acquireWakeLock();
     updateMediaSessionMetadata(DOM.chapTitle.textContent);
 
@@ -986,24 +994,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (activeEl) activeEl.classList.remove('tts-highlight');
   }
 
-  function updateScrubberUI() {
+  function updateScrubberUI(currentIdx) {
     const total = state.tts.paragraphs.length;
-    const current = state.tts.currentParaIndex;
+    const current = (currentIdx !== undefined) ? currentIdx : state.tts.currentParaIndex;
     
     if (total > 0) {
       const displayCurrent = Math.min(current + 1, total);
-      DOM.ttsParaCounter.textContent = `Đoạn ${displayCurrent} / ${total}`;
-      DOM.ttsSeekRange.value = current;
-      DOM.ttsSeekRange.max = total - 1;
-
       const percent = Math.round((displayCurrent / total) * 100);
-      DOM.ttsProgressPercent.textContent = `${percent}%`;
-
       const progressRatio = (current / Math.max(1, total - 1)) * 100;
-      DOM.ttsSeekRange.style.background = `linear-gradient(90deg, var(--accent-color) ${progressRatio}%, var(--bg-main) ${progressRatio}%)`;
+      const gradientStyle = `linear-gradient(90deg, var(--accent-color) ${progressRatio}%, var(--bg-main) ${progressRatio}%)`;
+
+      // 1. Update Permanent Reading Scrubber UI
+      if (DOM.scrubberParaDisplay) DOM.scrubberParaDisplay.textContent = `Đoạn ${displayCurrent} / ${total}`;
+      if (DOM.scrubberPercentDisplay) DOM.scrubberPercentDisplay.textContent = `${percent}%`;
+      if (DOM.readingSeekRange && !state.isSeekingManually) {
+        DOM.readingSeekRange.value = current;
+        DOM.readingSeekRange.style.background = gradientStyle;
+      }
+
+      // 2. Update Audio Floating Bar Scrubber UI
+      if (DOM.ttsParaCounter) DOM.ttsParaCounter.textContent = `Đoạn ${displayCurrent} / ${total}`;
+      if (DOM.ttsProgressPercent) DOM.ttsProgressPercent.textContent = `${percent}%`;
+      if (DOM.ttsSeekRange) {
+        DOM.ttsSeekRange.value = current;
+        DOM.ttsSeekRange.style.background = gradientStyle;
+      }
     } else {
-      DOM.ttsParaCounter.textContent = 'Đoạn 0 / 0';
-      DOM.ttsProgressPercent.textContent = '0%';
+      if (DOM.scrubberParaDisplay) DOM.scrubberParaDisplay.textContent = 'Đoạn 0 / 0';
+      if (DOM.scrubberPercentDisplay) DOM.scrubberPercentDisplay.textContent = '0%';
+      if (DOM.ttsParaCounter) DOM.ttsParaCounter.textContent = 'Đoạn 0 / 0';
+      if (DOM.ttsProgressPercent) DOM.ttsProgressPercent.textContent = '0%';
     }
   }
 
@@ -1052,7 +1072,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- EVENT LISTENERS ---
   function setupEventListeners() {
-    // Quick Story Select
     DOM.quickStorySelect.addEventListener('change', (e) => {
       const selectedId = e.target.value;
       const lastChap = getStoryLastChap(selectedId);
@@ -1176,6 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     DOM.btnBookmark.addEventListener('click', toggleBookmark);
 
+    // Event Delegation for Paragraph Clicks
     DOM.chapContent.addEventListener('click', (e) => {
       const p = e.target.closest('p[data-para-index]');
       if (p) {
@@ -1186,6 +1206,27 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // --- VISUAL READING SCRUBBER SEEK HANDLERS ---
+    DOM.readingSeekRange.addEventListener('input', (e) => {
+      state.isSeekingManually = true;
+      const targetIndex = parseInt(e.target.value, 10);
+      updateScrubberUI(targetIndex);
+      
+      const targetEl = DOM.chapContent.querySelector(`p[data-para-index="${targetIndex}"]`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    DOM.readingSeekRange.addEventListener('change', (e) => {
+      state.isSeekingManually = false;
+      const targetIndex = parseInt(e.target.value, 10);
+      if (state.tts.isPlaying || state.tts.isPaused) {
+        startTTS(targetIndex);
+      }
+    });
+
+    // --- AUDIO PLAYER BAR CONTROLS ---
     DOM.btnToggleTTS.addEventListener('click', () => {
       if (state.tts.isPlaying) {
         stopTTS();
@@ -1216,10 +1257,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Audio Scrubber Range Input
     DOM.ttsSeekRange.addEventListener('input', (e) => {
       const targetIndex = parseInt(e.target.value, 10);
       state.tts.currentParaIndex = targetIndex;
-      updateScrubberUI();
+      updateScrubberUI(targetIndex);
       highlightParagraph(targetIndex);
     });
 
@@ -1257,6 +1299,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Auto Scroll listeners
     DOM.btnToggleAutoScroll.addEventListener('click', () => {
       if (state.autoScrollInterval) {
         stopAutoScroll();
@@ -1279,10 +1322,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Floating Scrubber Toggle
+    DOM.fabToggleScrubber.addEventListener('click', () => {
+      DOM.readingScrubberCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      DOM.readingSeekRange.focus();
+    });
+
     DOM.fabScrollTop.addEventListener('click', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
+    // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
@@ -1344,6 +1394,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (totalHeight > 0) {
       const progress = (currentY / totalHeight) * 100;
       DOM.progressBar.style.width = `${progress}%`;
+
+      // Auto update reading progress scrubber as user scrolls down the chapter
+      if (!DOM.readerSection.classList.contains('hidden') && !state.isSeekingManually && state.tts.paragraphs.length > 0) {
+        const totalParas = state.tts.paragraphs.length;
+        const approxParaIndex = Math.min(totalParas - 1, Math.floor((currentY / Math.max(1, totalHeight)) * totalParas));
+        updateScrubberUI(approxParaIndex);
+      }
     }
 
     if (currentY > 120) {
