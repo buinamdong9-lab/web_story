@@ -9,7 +9,7 @@ if sys.stdout:
 
 def slugify(text):
     """Convert Vietnamese text to a clean URL-friendly slug"""
-    text = text.lower()
+    text = text.lower().replace('_', ' ')
     text = re.sub(r'[àáạảãâầấậẩẫăằắặẳẵ]', 'a', text)
     text = re.sub(r'[èéẹẻẽêềếệểễ]', 'e', text)
     text = re.sub(r'[ìíịỉĩ]', 'i', text)
@@ -49,6 +49,11 @@ def process_story(json_path, story_id=None, story_meta=None):
         'description': 'Bộ truyện hấp dẫn với nhiều tình tiết đặc sắc.',
         'cover_image': f'images/{story_id}_cover.jpg'
     }
+
+    if isinstance(data, dict):
+        for k in ['title', 'author', 'category', 'status', 'description', 'cover_image', 'original_title']:
+            if k in data and data[k]:
+                meta[k] = data[k]
 
     if story_meta:
         meta.update(story_meta)

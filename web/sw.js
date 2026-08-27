@@ -2,7 +2,7 @@
  * WebStory Service Worker - High-Performance Stale-While-Revalidate & Offline Engine
  */
 
-const CACHE_NAME = 'webstory-cache-v1';
+const CACHE_NAME = 'webstory-cache-v3';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -36,16 +36,28 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event - Stale-While-Revalidate Strategy for Lightning Fast Performance
+// Fetch Event
 self.addEventListener('fetch', (event) => {
   const request = event.request;
 
-  // Only cache GET requests
   if (request.method !== 'GET') return;
-
-  // Ignore browser-extensions or non-http
   if (!request.url.startsWith('http')) return;
 
+  // Network-First for stories catalogue so newly added stories appear instantly
+  if (request.url.includes('stories.json') || request.url.includes('toc.json')) {
+    event.respondWith(
+      fetch(request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const clone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return networkResponse;
+      }).catch(() => caches.match(request))
+    );
+    return;
+  }
+
+  // Stale-While-Revalidate Strategy for other static assets
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       const fetchPromise = fetch(request).then((networkResponse) => {
@@ -56,10 +68,7 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      }).catch(() => {
-        // Return cached response if offline
-        return cachedResponse;
-      });
+      }).catch(() => cachedResponse);
 
       return cachedResponse || fetchPromise;
     })
