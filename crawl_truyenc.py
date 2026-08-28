@@ -21,6 +21,8 @@ import unicodedata
 from urllib.parse import urljoin, urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 
 # Ensure UTF-8 Output on Windows Shell
@@ -31,8 +33,17 @@ BASE_URL = 'https://truyenc.com'
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
     'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Referer': 'https://truyenc.com/'
+    'Referer': 'https://truyenc.com/',
+    'Connection': 'keep-alive'
 }
+
+# High-Performance HTTP Session with Connection Pooling & Auto-Retry
+SESSION = requests.Session()
+retries = Retry(total=3, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
+adapter = HTTPAdapter(pool_connections=50, pool_maxsize=50, max_retries=retries)
+SESSION.mount('http://', adapter)
+SESSION.mount('https://', adapter)
+SESSION.headers.update(HEADERS)
 
 CHECKPOINT_FILE = 'crawler_checkpoint.json'
 STORIES_DIR = os.path.join('data', 'stories')
@@ -125,7 +136,7 @@ def download_cover_image(img_url, dest_path):
     try:
         if img_url.startswith('/'):
             img_url = urljoin(BASE_URL, img_url)
-        res = requests.get(img_url, headers=HEADERS, timeout=12)
+        res = SESSION.get(img_url, timeout=12)
         if res.status_code == 200 and len(res.content) > 1000:
             with open(dest_path, 'wb') as f:
                 f.write(res.content)
@@ -139,7 +150,7 @@ def fetch_chapter_content(chap_url):
     """Fetch single chapter text content with retry."""
     for attempt in range(3):
         try:
-            res = requests.get(chap_url, headers=HEADERS, timeout=15)
+            res = SESSION.get(chap_url, timeout=15)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, 'html.parser')
                 
@@ -165,7 +176,7 @@ def crawl_story(story_url, checkpoint, default_category='Truyện Hay'):
     print(f"==================================================")
     
     try:
-        res = requests.get(story_url, headers=HEADERS, timeout=15)
+        res = SESSION.get(story_url, timeout=15)
         if res.status_code != 200:
             print(f"[ERROR] HTTP {res.status_code} fetching story page.")
             return False
@@ -370,7 +381,7 @@ def crawl_category(category_path, default_cat_name='Truyện Hay', max_pages=Non
         print(f"-> Scanning catalogue page {page}: {page_url}")
         
         try:
-            res = requests.get(page_url, headers=HEADERS, timeout=15)
+            res = SESSION.get(page_url, timeout=15)
             if res.status_code != 200:
                 break
                 
