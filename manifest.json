@@ -8,6 +8,11 @@
   "description": "Đọc và nghe audio truyện online tốc độ cao, hỗ trợ đa giọng đọc AI và offline reading.",
   "icons": [
     {
+      "src": "images/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
       "src": "images/cover.jpg",
       "sizes": "512x512",
       "type": "image/jpeg"

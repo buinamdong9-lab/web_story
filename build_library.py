@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+WebStory Universal Library Builder & Scalable Index Generator
+Features:
+- Scans both standalone JSON files and partitioned `data/stories/{id}/` datasets
+- Minifies chapter payloads and generates ultra-lean global catalogue (`stories.json`)
+- Syncs PWA Manifest and static assets to root for GitHub Pages
+"""
+
 import os
 import sys
 import json
@@ -6,6 +16,7 @@ import shutil
 
 if sys.stdout:
     sys.stdout.reconfigure(encoding='utf-8')
+
 
 def slugify(text):
     """Convert Vietnamese text to a clean URL-friendly slug"""
@@ -21,7 +32,8 @@ def slugify(text):
     text = re.sub(r'[\s-]+', '-', text).strip('-')
     return text or 'story'
 
-def process_story(json_path, story_id=None, story_meta=None):
+
+def process_story_json(json_path, story_id=None, story_meta=None):
     with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
@@ -91,7 +103,6 @@ def process_story(json_path, story_id=None, story_meta=None):
         })
 
         chap_file = os.path.join(chapters_dir, f"{idx}.json")
-        # Save ultra-compact minified JSON
         with open(chap_file, 'w', encoding='utf-8') as cf:
             json.dump({
                 'story_id': story_id,
@@ -105,7 +116,6 @@ def process_story(json_path, story_id=None, story_meta=None):
     meta['total_chapters'] = len(toc)
     meta['total_words'] = total_words
 
-    # Save detailed story TOC (minified)
     toc_file = os.path.join(web_stories_dir, 'toc.json')
     with open(toc_file, 'w', encoding='utf-8') as tf:
         json.dump({
@@ -115,8 +125,6 @@ def process_story(json_path, story_id=None, story_meta=None):
 
     print(f"-> Processed '{meta['title']}' ({len(toc)} chaps, {total_words:,} words) -> {web_stories_dir}")
 
-    # Return ultra-lightweight card index record for the 100-1000 story catalogue
-    # We truncate description to 120 chars so 1,000 stories JSON index is < 150KB!
     short_desc = (meta['description'][:120] + '...') if len(meta['description']) > 120 else meta['description']
     return {
         'id': meta['id'],
@@ -130,6 +138,60 @@ def process_story(json_path, story_id=None, story_meta=None):
         'total_words': meta['total_words']
     }
 
+
+def process_partitioned_story(story_dir):
+    """Process pre-partitioned story from data/stories/{story_id}"""
+    story_id = os.path.basename(story_dir)
+    toc_path = os.path.join(story_dir, 'toc.json')
+    
+    if not os.path.exists(toc_path):
+        return None
+        
+    with open(toc_path, 'r', encoding='utf-8') as f:
+        toc_data = json.load(f)
+        
+    web_story_dir = os.path.join('web', 'data', 'stories', story_id)
+    web_chaps_dir = os.path.join(web_story_dir, 'chapters')
+    os.makedirs(web_chaps_dir, exist_ok=True)
+    
+    # Sync chapters
+    src_chaps = os.path.join(story_dir, 'chapters')
+    if os.path.exists(src_chaps):
+        for f in os.listdir(src_chaps):
+            if f.endswith('.json'):
+                src_file = os.path.join(src_chaps, f)
+                dst_file = os.path.join(web_chaps_dir, f)
+                shutil.copy(src_file, dst_file)
+                
+    # Sync TOC
+    with open(os.path.join(web_story_dir, 'toc.json'), 'w', encoding='utf-8') as tf:
+        json.dump(toc_data, tf, ensure_ascii=False, separators=(',', ':'))
+        
+    # Sync cover image
+    src_cover = os.path.join(story_dir, 'cover.jpg')
+    if os.path.exists(src_cover):
+        img_dest = os.path.join('web', 'images', f"{story_id}_cover.jpg")
+        shutil.copy(src_cover, img_dest)
+        toc_data['cover_image'] = f"images/{story_id}_cover.jpg"
+        
+    print(f"-> Synced partitioned story '{toc_data.get('title')}' ({toc_data.get('total_chapters')} chaps, {toc_data.get('total_words', 0):,} words)")
+    
+    desc = toc_data.get('description', 'Bộ truyện đặc sắc.')
+    short_desc = (desc[:120] + '...') if len(desc) > 120 else desc
+    
+    return {
+        'id': story_id,
+        'title': toc_data.get('title', story_id),
+        'author': toc_data.get('author', 'Đang cập nhật'),
+        'category': toc_data.get('category', 'Truyện Hay'),
+        'status': toc_data.get('status', 'Hoàn Thành'),
+        'description': short_desc,
+        'cover_image': toc_data.get('cover_image', 'images/cover.jpg'),
+        'total_chapters': toc_data.get('total_chapters', len(toc_data.get('chapters', []))),
+        'total_words': toc_data.get('total_words', 0)
+    }
+
+
 def generate_pwa_manifest(web_dir):
     """Generate Progressive Web App manifest for offline installation"""
     manifest = {
@@ -142,6 +204,11 @@ def generate_pwa_manifest(web_dir):
         "description": "Đọc và nghe audio truyện online tốc độ cao, hỗ trợ đa giọng đọc AI và offline reading.",
         "icons": [
             {
+                "src": "images/favicon.svg",
+                "sizes": "any",
+                "type": "image/svg+xml"
+            },
+            {
                 "src": "images/cover.jpg",
                 "sizes": "512x512",
                 "type": "image/jpeg"
@@ -150,6 +217,7 @@ def generate_pwa_manifest(web_dir):
     }
     with open(os.path.join(web_dir, 'manifest.json'), 'w', encoding='utf-8') as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
+
 
 def build_all_library():
     web_dir = 'web'
@@ -162,17 +230,20 @@ def build_all_library():
     # Copy cover images if available
     cover_artifact = r'C:\Users\DONGTTNT\.gemini\antigravity-ide\brain\e21e1fc3-75ce-42f7-92fa-fea77708768e\than_nu_cover_1787731152238.jpg'
     if os.path.exists(cover_artifact):
-        shutil.copy(cover_artifact, os.path.join(img_dir, 'than_nu_tieu_dao_luc_cover.jpg'))
-        shutil.copy(cover_artifact, os.path.join(img_dir, 'cover.jpg'))
+        if not os.path.exists(os.path.join(img_dir, 'than_nu_tieu_dao_luc_cover.jpg')):
+            shutil.copy(cover_artifact, os.path.join(img_dir, 'than_nu_tieu_dao_luc_cover.jpg'))
+        if not os.path.exists(os.path.join(img_dir, 'cover.jpg')):
+            shutil.copy(cover_artifact, os.path.join(img_dir, 'cover.jpg'))
 
     stories_manifest = []
+    processed_story_ids = set()
 
-    # 1. Main story: Than Nu Tieu Dao Luc
+    # 1. Process Main Story: Than Nu Tieu Dao Luc
     if os.path.exists('Than_Nu_Tieu_Dao_Luc.json'):
-        meta = process_story('Than_Nu_Tieu_Dao_Luc.json', 'than_nu_tieu_dao_luc')
+        meta = process_story_json('Than_Nu_Tieu_Dao_Luc.json', 'than_nu_tieu_dao_luc')
         stories_manifest.append(meta)
+        processed_story_ids.add('than_nu_tieu_dao_luc')
 
-        # For backwards compatibility with single-story endpoints:
         shutil.copytree(
             os.path.join(data_dir, 'stories', 'than_nu_tieu_dao_luc', 'chapters'),
             os.path.join(data_dir, 'chapters'),
@@ -183,21 +254,35 @@ def build_all_library():
             os.path.join(data_dir, 'toc.json')
         )
 
-    # 2. Automatically scan for any other story JSON files
-    for fname in os.listdir('.'):
+    # 2. Process Partitioned Stories from data/stories/
+    data_stories_dir = os.path.join('data', 'stories')
+    if os.path.exists(data_stories_dir):
+        for s_dir_name in sorted(os.listdir(data_stories_dir)):
+            s_full_path = os.path.join(data_stories_dir, s_dir_name)
+            if os.path.isdir(s_full_path) and s_dir_name not in processed_story_ids:
+                meta = process_partitioned_story(s_full_path)
+                if meta:
+                    stories_manifest.append(meta)
+                    processed_story_ids.add(meta['id'])
+
+    # 3. Process any standalone JSON files
+    for fname in sorted(os.listdir('.')):
         if fname.endswith('.json') and fname not in [
             'Than_Nu_Tieu_Dao_Luc.json', 'all_chapters_crawled.json', 
             'fast_crawl_results.json', 'full_story_batch.json',
-            'manifest.json', 'package.json', 'package-lock.json', 'tsconfig.json'
+            'crawler_checkpoint.json', 'manifest.json', 'package.json', 
+            'package-lock.json', 'tsconfig.json'
         ]:
             try:
                 sid = slugify(os.path.splitext(fname)[0])
-                meta = process_story(fname, sid)
-                stories_manifest.append(meta)
+                if sid not in processed_story_ids:
+                    meta = process_story_json(fname, sid)
+                    stories_manifest.append(meta)
+                    processed_story_ids.add(sid)
             except Exception as e:
                 print(f"Skipping {fname}: {e}")
 
-    # Extract all distinct categories for instant category filtering
+    # Extract all distinct categories
     all_categories = set()
     for s in stories_manifest:
         cats = [c.strip() for c in s.get('category', '').split(',') if c.strip()]
@@ -207,7 +292,7 @@ def build_all_library():
     library_file = os.path.join(data_dir, 'stories.json')
     with open(library_file, 'w', encoding='utf-8') as lf:
         json.dump({
-            'updated_at': '2026-08-26',
+            'updated_at': '2026-08-28',
             'total_stories': len(stories_manifest),
             'categories': sorted(list(all_categories)),
             'stories': stories_manifest
@@ -228,6 +313,7 @@ def build_all_library():
 
     print(f"\n[SUCCESS] Scalable Index generated for {len(stories_manifest)} stories in {library_file}")
     print("[SUCCESS] All minified web assets & PWA manifest synced to root directory for GitHub Pages.")
+
 
 if __name__ == '__main__':
     build_all_library()
