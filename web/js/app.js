@@ -655,7 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       card.innerHTML = `
         <div class="story-card-cover-box">
-          <img src="${coverSrc}" class="story-card-cover" alt="${escapeHTML(story.title)}" onerror="this.src='images/cover.jpg'" loading="lazy">
+          <img src="${coverSrc}" class="story-card-cover" alt="${escapeHTML(story.title)}" onerror="this.src='images/cover.jpg'" loading="lazy" decoding="async" width="240" height="320">
           <span class="story-card-badge">${escapeHTML(story.status || 'Hoàn Thành')}</span>
         </div>
         <div class="story-card-body">

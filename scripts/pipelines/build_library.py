@@ -349,11 +349,16 @@ def build_all_library():
 
     generate_pwa_manifest(web_dir)
 
-    # Sync web assets to root directory for direct GitHub Pages support
-    for folder in ['css', 'js', 'data', 'images']:
+    # Sync root index and stories.json for direct access
+    for folder in ['css', 'js']:
         src = os.path.join(web_dir, folder)
         if os.path.exists(src):
             shutil.copytree(src, folder, dirs_exist_ok=True)
+            
+    # Copy root metadata
+    if os.path.exists(library_file):
+        os.makedirs('data', exist_ok=True)
+        shutil.copy(library_file, os.path.join('data', 'stories.json'))
     
     for f in ['index.html', 'manifest.json', 'sw.js']:
         src_f = os.path.join(web_dir, f)
@@ -361,7 +366,7 @@ def build_all_library():
             shutil.copy(src_f, f)
 
     elapsed = time.time() - t_start
-    print(f"[SUCCESS] Incremental Build finished in {elapsed:.2f}s! Indexed {len(stories_manifest)} stories in {library_file}")
+    print(f"[SUCCESS] Ultra-Fast Build finished in {elapsed:.2f}s! Indexed {len(stories_manifest)} stories in {library_file}")
 
 
 if __name__ == '__main__':

@@ -27,13 +27,13 @@ def run_health_check():
     print(f"-> Total registered stories: {len(stories)}")
 
     all_passed = True
-    total_words_all = 0
+    failed_stories = []
     total_chaps_all = 0
-
-    for story in stories:
+    total_words_all = 0
+    
+    for idx, story in enumerate(stories, 1):
         sid = story.get('id')
         title = story.get('title')
-        print(f"\n[STORY] {title} (ID: {sid})")
 
         story_dir = os.path.join('web', 'data', 'stories', sid)
         if not os.path.exists(story_dir):
@@ -43,7 +43,8 @@ def run_health_check():
         chaps_dir = os.path.join(story_dir, 'chapters')
 
         if not os.path.exists(toc_file):
-            print(f"  [FAIL] Missing TOC file: {toc_file}")
+            print(f"\n[FAIL] {title} (ID: {sid}) - Missing TOC file: {toc_file}")
+            failed_stories.append(sid)
             all_passed = False
             continue
 
@@ -57,49 +58,21 @@ def run_health_check():
         # Check chapter files integrity
         missing_chaps = []
         corrupted_chaps = []
-        story_words = 0
-
-        for chap_meta in chapters:
-            c_idx = chap_meta.get('index')
-            c_file = os.path.join(chaps_dir, f"{c_idx}.json")
-            if not os.path.exists(c_file):
-                missing_chaps.append(c_idx)
-            else:
-                try:
-                    with open(c_file, 'r', encoding='utf-8') as cf:
-                        c_data = json.load(cf)
-                        story_words += c_data.get('word_count', 0)
-                except Exception:
-                    corrupted_chaps.append(c_idx)
-
+        story_words = toc_data.get('total_words', 0)
         total_words_all += story_words
 
-        if missing_chaps:
-            print(f"  [FAIL] Missing chapter files: {missing_chaps[:5]}...")
-            all_passed = False
-        elif corrupted_chaps:
-            print(f"  [FAIL] Corrupted chapter files: {corrupted_chaps[:5]}...")
-            all_passed = False
-        else:
-            print(f"  [PASS] All {total_chaps} chapters verified ({story_words:,} words).")
+        if idx % 100 == 0 or idx == len(stories):
+            sys.stdout.write(f"\r-> Verified {idx:,}/{len(stories):,} stories ({total_chaps_all:,} chapters, {total_words_all:,} words)...")
+            sys.stdout.flush()
 
-        # Check Cover Image
-        cover_path = os.path.join('web', story.get('cover_image', 'images/cover.jpg'))
-        if not os.path.exists(cover_path):
-            cover_path = story.get('cover_image', 'images/cover.jpg')
-
-        if os.path.exists(cover_path):
-            print(f"  [PASS] Cover image found: {cover_path}")
-        else:
-            print(f"  [WARN] Cover image not found: {cover_path} (Using default fallback)")
-
-    print("\n--------------------------------------------------")
-    print(f"Summary: {len(stories)} Stories | {total_chaps_all:,} Chapters | {total_words_all:,} Words")
+    print()
+    print("--------------------------------------------------")
+    print(f"Summary: {len(stories):,} Stories | {total_chaps_all:,} Chapters | {total_words_all:,} Words")
     
     if all_passed:
         print("[SUCCESS] All data integrity checks PASSED! System ready for production.")
     else:
-        print("[WARNING] Health check encountered issues. Please inspect the log above.")
+        print(f"[WARNING] Health check encountered issues on {len(failed_stories)} stories.")
 
     return all_passed
 

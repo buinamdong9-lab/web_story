@@ -2,7 +2,7 @@
  * WebStory Service Worker - High-Performance Stale-While-Revalidate & Cache-First Offline Engine
  */
 
-const CACHE_NAME = 'webstory-cache-v4';
+const CACHE_NAME = 'webstory-cache-v5';
 const STATIC_ASSETS = [
   './',
   './index.html',

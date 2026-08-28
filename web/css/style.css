@@ -471,6 +471,8 @@ body.theme-sepia .search-highlight {
   text-decoration: none;
   color: inherit;
   contain: content;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 90px;
 }
 
 .recent-card:hover {
@@ -526,6 +528,8 @@ body.theme-sepia .search-highlight {
   color: inherit;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   contain: content;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 380px;
 }
 
 .story-card:hover {

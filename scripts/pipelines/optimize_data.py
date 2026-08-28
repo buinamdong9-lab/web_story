@@ -72,54 +72,59 @@ def optimize_images():
     print(f"-> Optimized {optimized_count} images. Size reduced: {total_before/1024:.1f} KB -> {total_after/1024:.1f} KB (Saved {saved_kb:.1f} KB, -{pct:.1f}%)")
 
 
+import multiprocessing
+
+def _minify_chapter_worker(file_path):
+    try:
+        size_before = os.path.getsize(file_path)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        cleaned_data = {
+            'index': data.get('index', 1),
+            'title': data.get('title', 'Chương').strip(),
+            'content': data.get('content', '').strip(),
+            'word_count': data.get('word_count', len(data.get('content', '').split()))
+        }
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(cleaned_data, f, ensure_ascii=False, separators=(',', ':'))
+            
+        size_after = os.path.getsize(file_path)
+        return size_before, size_after
+    except Exception:
+        return 0, 0
+
+
 def optimize_json_chapters():
-    print("\n[STEP 2/3] Minifying & Compressing 100% of Chapter JSON Payloads...")
+    print("\n[STEP 2/3] Parallel Minifying & Compressing 100% Chapter Payloads across all CPU Cores...")
     
     chapter_files = glob.glob(os.path.join('data', 'stories', '*', 'chapters', '*.json')) + \
                     glob.glob(os.path.join('web', 'data', 'stories', '*', 'chapters', '*.json'))
                     
     total_chaps = len(chapter_files)
-    total_before = 0
-    total_after = 0
+    if total_chaps == 0:
+        print("-> No chapter files found.")
+        return
+        
+    num_cpus = min(os.cpu_count() or 4, 16)
+    print(f"-> Launching {num_cpus} parallel processes for {total_chaps:,} chapter files...")
     
-    for idx, cf in enumerate(chapter_files, 1):
-        try:
-            size_before = os.path.getsize(cf)
-            total_before += size_before
-            
-            with open(cf, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                
-            # Keep only necessary fields for reading & audio
-            cleaned_data = {
-                'index': data.get('index', 1),
-                'title': data.get('title', 'Chương').strip(),
-                'content': data.get('content', '').strip(),
-                'word_count': data.get('word_count', len(data.get('content', '').split()))
-            }
-            
-            with open(cf, 'w', encoding='utf-8') as f:
-                json.dump(cleaned_data, f, ensure_ascii=False, separators=(',', ':'))
-                
-            size_after = os.path.getsize(cf)
-            total_after += size_after
-            
-            if idx % 200 == 0 or idx == total_chaps:
-                sys.stdout.write(f"\r-> Processed {idx:,}/{total_chaps:,} chapter files...")
-                sys.stdout.flush()
-                
-        except Exception:
-            pass
-            
-    print()
+    with multiprocessing.Pool(processes=num_cpus) as pool:
+        results = pool.map(_minify_chapter_worker, chapter_files, chunksize=250)
+        
+    total_before = sum(r[0] for r in results)
+    total_after = sum(r[1] for r in results)
+    
     saved_kb = (total_before - total_after) / 1024
     pct = (1 - (total_after / total_before)) * 100 if total_before > 0 else 0
-    print(f"[SUCCESS] {total_chaps:,} chapters minified! Saved: {saved_kb:.1f} KB (-{pct:.1f}% bandwidth)")
+    print(f"[SUCCESS] {total_chaps:,} chapters minified in parallel! Saved: {saved_kb:.1f} KB (-{pct:.1f}% bandwidth)")
 
 
 def rebuild_and_sync_library():
     print("\n[STEP 3/3] Rebuilding Global Catalogue & PWA Cache Manifest...")
-    os.system("python build_library.py")
+    from build_library import build_all_library
+    build_all_library()
 
 
 def main():
