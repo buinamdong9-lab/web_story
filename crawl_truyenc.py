@@ -7,7 +7,7 @@ Features:
 - Text Sanitization & Minified JSON Payloads
 - Checkpointing & Resume on Interruption
 - Multi-threaded Chapter Fetching with Jitter Delay
-- Automatic Library Index Integration (build_library.py)
+- Automatic Incremental Library Sync (every 10 stories)
 """
 
 import os
@@ -85,7 +85,6 @@ def clean_story_text(html_or_text):
         
     text = soup.get_text()
     
-    # Clean unwanted website watermarks & junk lines
     lines = []
     watermark_patterns = [
         r'truyenc\.com',
@@ -101,7 +100,6 @@ def clean_story_text(html_or_text):
         if not cleaned_line:
             continue
         
-        # Check if line matches common watermarks
         if any(re.search(pat, cleaned_line, re.IGNORECASE) for pat in watermark_patterns):
             if len(cleaned_line) < 80:
                 continue
@@ -133,7 +131,7 @@ def download_cover_image(img_url, dest_path):
                 f.write(res.content)
             return dest_path
     except Exception as e:
-        print(f"  [WARN] Failed to download cover {img_url}: {e}")
+        pass
     return None
 
 
@@ -145,7 +143,6 @@ def fetch_chapter_content(chap_url):
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, 'html.parser')
                 
-                # Check main candidate containers on truyenc.com
                 content_el = soup.find('div', class_='story-content') or \
                              soup.find('div', class_='content') or \
                              soup.find('div', class_='page-content')
@@ -153,16 +150,15 @@ def fetch_chapter_content(chap_url):
                 if content_el:
                     return clean_story_text(str(content_el))
                     
-                # Fallback to general text extraction
                 body = soup.find('article') or soup.find('body')
                 if body:
                     return clean_story_text(str(body))
-        except Exception as e:
-            time.sleep(1 + attempt)
+        except Exception:
+            time.sleep(0.8 + attempt)
     return None
 
 
-def crawl_story(story_url, checkpoint):
+def crawl_story(story_url, checkpoint, default_category='Truyện Hay'):
     """Crawl full story metadata, TOC, and all chapters."""
     print(f"\n==================================================")
     print(f"[CRAWL STORY] {story_url}")
@@ -181,28 +177,37 @@ def crawl_story(story_url, checkpoint):
         title = h1.get_text(strip=True) if h1 else 'Truyện Không Tên'
         story_id = get_story_id_from_url(story_url)
         
-        # Extract Author & Categories
         author = 'Đang cập nhật'
-        category = 'Truyện Hay'
+        category = default_category
         description = 'Bộ truyện đặc sắc được tổng hợp từ TruyenC.'
         
         for div in soup.find_all(['div', 'p', 'span']):
             t = div.get_text(strip=True)
             if 'Tác giả:' in t:
-                author = t.replace('Tác giả:', '').strip()
+                extracted = t.replace('Tác giả:', '').strip()
+                if len(extracted) < 40:
+                    author = extracted
             elif 'Thể loại:' in t:
-                category = t.replace('Thể loại:', '').strip()
+                extracted = t.replace('Thể loại:', '').strip()
+                if len(extracted) < 60:
+                    category = extracted
+                    
+        # Clean author if it contains junk
+        if len(author) > 50 or 'Truyện' in author:
+            author = 'Nhiều Tác Giả'
                 
         # Description
         desc_el = soup.find('div', class_='story-desc') or \
                   soup.find('div', class_='desc') or \
                   soup.find('div', class_='description')
         if desc_el:
-            description = desc_el.get_text(strip=True)
+            desc_text = desc_el.get_text(strip=True)
+            if len(desc_text) > 10:
+                description = desc_text
             
         # Cover Image URL
         cover_img_url = None
-        img_el = soup.find('img', class_='story-cover') or soup.find('div', class_='cover').find('img') if soup.find('div', class_='cover') else None
+        img_el = soup.find('img', class_='story-cover') or (soup.find('div', class_='cover').find('img') if soup.find('div', class_='cover') else None)
         if not img_el:
             for img in soup.find_all('img'):
                 src = img.get('src') or img.get('data-src') or ''
@@ -230,12 +235,16 @@ def crawl_story(story_url, checkpoint):
                 seen_links.add(href)
                 
         if not chap_links:
-            print(f"[WARN] No chapter links found for story {title}. Skipping.")
-            return False
+            # Single-chapter story / one-shot
+            chap_links.append({
+                'index': 1,
+                'title': title,
+                'url': story_url
+            })
             
         print(f"-> Title: {title}")
         print(f"-> Author: {author} | Category: {category}")
-        print(f"-> Total Chapters Found: {len(chap_links)}")
+        print(f"-> Total Chapters: {len(chap_links)}")
         
         # 3. Setup Partitioned Directory Structure
         story_dest_dir = os.path.join(STORIES_DIR, story_id)
@@ -251,13 +260,10 @@ def crawl_story(story_url, checkpoint):
         total_words = 0
         toc_entries = []
         
-        print(f"-> Fetching {len(chap_links)} chapters with multi-threading...")
-        
         def process_chap(chap_info):
             idx = chap_info['index']
             chap_file = os.path.join(chaps_dest_dir, f"{idx}.json")
             
-            # Check if chapter already crawled
             if os.path.exists(chap_file):
                 try:
                     with open(chap_file, 'r', encoding='utf-8') as f:
@@ -278,14 +284,13 @@ def crawl_story(story_url, checkpoint):
                 'content': content
             }
             
-            # Save minified JSON
             with open(chap_file, 'w', encoding='utf-8') as f:
                 json.dump(chap_payload, f, ensure_ascii=False, separators=(',', ':'))
                 
-            time.sleep(random.uniform(0.1, 0.3))
+            time.sleep(random.uniform(0.05, 0.2))
             return idx, chap_info['title'], word_count, False
 
-        with ThreadPoolExecutor(max_workers=6) as executor:
+        with ThreadPoolExecutor(max_workers=8) as executor:
             futures = [executor.submit(process_chap, chap) for chap in chap_links]
             for fut in as_completed(futures):
                 idx, ch_title, w_count, from_cache = fut.result()
@@ -336,7 +341,7 @@ def crawl_story(story_url, checkpoint):
             checkpoint['completed_stories'].append(story_url)
             save_checkpoint(checkpoint)
             
-        print(f"[SUCCESS] Story '{title}' crawled & partitioned successfully ({len(toc_entries)} chaps, {total_words:,} words)!")
+        print(f"[SUCCESS] Story '{title}' crawled ({len(toc_entries)} chaps, {total_words:,} words)!")
         return True
         
     except Exception as e:
@@ -344,13 +349,13 @@ def crawl_story(story_url, checkpoint):
         return False
 
 
-def crawl_category(category_path, max_pages=None, max_stories=None):
+def crawl_category(category_path, default_cat_name='Truyện Hay', max_pages=None, max_stories=None):
     """Crawl all stories listed under a specific category on TruyenC."""
     checkpoint = load_checkpoint()
     
     cat_url = urljoin(BASE_URL, category_path)
     print(f"\n==================================================")
-    print(f" SCANNING CATEGORY: {cat_url}")
+    print(f" SCANNING CATEGORY: {cat_url} ({default_cat_name})")
     print(f"==================================================")
     
     page = 1
@@ -381,7 +386,7 @@ def crawl_category(category_path, max_pages=None, max_stories=None):
                         page_story_urls.append(full)
                         
             if not page_story_urls:
-                print(f"-> No more stories found on page {page}. Done scanning.")
+                print(f"-> No more stories on page {page}. Done scanning category.")
                 break
                 
             story_urls.extend(page_story_urls)
@@ -392,24 +397,29 @@ def crawl_category(category_path, max_pages=None, max_stories=None):
                 break
                 
             page += 1
-            time.sleep(0.5)
+            time.sleep(0.3)
             
         except Exception as e:
             print(f"[WARN] Error scanning page {page}: {e}")
             break
             
-    print(f"\n[FOUND] Total {len(story_urls)} stories to crawl.")
+    print(f"\n[FOUND] Total {len(story_urls)} stories to crawl in this category.")
     
     success_count = 0
     for idx, s_url in enumerate(story_urls, 1):
-        print(f"\n[{idx}/{len(story_urls)}] Processing story: {s_url}")
+        print(f"\n[{idx}/{len(story_urls)}] Processing: {s_url}")
         if s_url in checkpoint['completed_stories']:
             print("   -> Already in checkpoint. Skipping.")
             success_count += 1
             continue
             
-        if crawl_story(s_url, checkpoint):
+        if crawl_story(s_url, checkpoint, default_cat_name):
             success_count += 1
+            
+        # Incremental sync every 10 stories
+        if success_count > 0 and success_count % 10 == 0:
+            print("\n[AUTO-SYNC] Synchronizing batch into Web Library...")
+            os.system("python build_library.py")
             
     print(f"\n==================================================")
     print(f" CATEGORY CRAWL FINISHED: {success_count}/{len(story_urls)} stories completed")
@@ -426,31 +436,33 @@ def main():
     
     args = parser.parse_args()
     
-    category_map = {
-        'ma': '/tim-truyen-ma',
-        '18': '/tim-truyen-18',
-        'cuoi': '/tim-truyen-cuoi',
-        'audio': '/tim-truyen-audio'
-    }
+    categories = [
+        ('ma', '/tim-truyen-ma', 'Truyện Ma, Kinh Dị'),
+        ('18', '/tim-truyen-18', 'Truyện 18+, Ngôn Tình'),
+        ('cuoi', '/tim-truyen-cuoi', 'Truyện Cười, Hài Hước'),
+        ('audio', '/tim-truyen-audio', 'Truyện Audio, Đêm Khuya')
+    ]
     
     checkpoint = load_checkpoint()
     
     if args.url:
         crawl_story(args.url, checkpoint)
     elif args.category:
-        cat_path = category_map.get(args.category.lower(), f"/tim-truyen-{args.category}")
-        crawl_category(cat_path, max_pages=args.limit_pages, max_stories=args.limit_stories)
-    elif args.all:
-        for cat_name, cat_path in category_map.items():
-            print(f"\n>>> Starting Category: {cat_name.upper()} <<<")
-            crawl_category(cat_path, max_pages=args.limit_pages, max_stories=args.limit_stories)
+        found = False
+        for c_slug, c_path, c_name in categories:
+            if args.category.lower() in [c_slug, c_slug.replace('-', '')]:
+                crawl_category(c_path, c_name, max_pages=args.limit_pages, max_stories=args.limit_stories)
+                found = True
+                break
+        if not found:
+            crawl_category(f"/tim-truyen-{args.category}", f"Truyện {args.category.title()}", max_pages=args.limit_pages, max_stories=args.limit_stories)
     else:
-        # Default sample run if no args passed: crawl top stories from /tim-truyen-ma
-        print("[INFO] No category specified. Starting crawl on Truyện Ma category (--category ma)...")
-        crawl_category('/tim-truyen-ma', max_pages=1, max_stories=5)
-        
-    # Auto-run build_library.py to integrate new stories into web directory
-    print("\n[SYNC] Integrating newly crawled stories into Web Library...")
+        # Default or --all: Crawl all categories sequentially
+        print("[INFO] Starting comprehensive full website crawl across all categories...")
+        for c_slug, c_path, c_name in categories:
+            crawl_category(c_path, c_name, max_pages=args.limit_pages, max_stories=args.limit_stories)
+            
+    print("\n[FINAL SYNC] Integrating all crawled stories into Web Library...")
     os.system("python build_library.py")
 
 
