@@ -646,50 +646,129 @@
 
       <!-- 2. PROFILE & PERMISSIONS VIEW (LOGGED IN) -->
       <div id="authProfileView" class="auth-body" style="display: none;">
-        <div class="auth-profile-card">
-          <div class="auth-avatar-circle">👑</div>
-          <div class="auth-profile-details">
-            <h4 id="authProfileName" class="auth-profile-name">Bùi Nam Đông</h4>
-            <div id="authProfileEmail" class="auth-profile-email">buinamdong9@gmail.com</div>
-            <div style="margin-top: 6px;">
-              <span id="authProfileRole" class="badge-role badge-admin">👑 Quản Trị Viên</span>
+
+        <!-- Tab Nav — chỉ Super Admin thấy tab Quản Lý -->
+        <div class="auth-tabs" id="authTabNav">
+          <button class="auth-tab active" id="tabProfile">👤 Tài Khoản</button>
+          <button class="auth-tab" id="tabUserMgmt" style="display:none;">⚙️ Quản Lý Users</button>
+        </div>
+
+        <!-- ── PANEL: Thông tin cá nhân ── -->
+        <div id="tabPanelProfile">
+          <div class="auth-profile-card">
+            <div class="auth-avatar-circle" id="authAvatarCircle">👑</div>
+            <div class="auth-profile-details">
+              <h4 id="authProfileName" class="auth-profile-name">Bùi Nam Đông</h4>
+              <div id="authProfileEmail" class="auth-profile-email">buinamdong9@gmail.com</div>
+              <div style="margin-top: 6px;">
+                <span id="authProfileRole" class="badge-role badge-admin">👑 Quản Trị Viên Tối Cao</span>
+              </div>
             </div>
           </div>
+
+          <div class="auth-perms-section">
+            <div class="auth-perms-title">Quyền hạn (Permissions):</div>
+            <ul id="authProfilePerms" class="auth-perms-list"></ul>
+          </div>
+
+          <div class="auth-system-status">
+            <div class="auth-status-item">
+              <span>Trạng thái phiên:</span>
+              <strong style="color: #10b981;">Đang hoạt động (Active)</strong>
+            </div>
+            <div class="auth-status-item">
+              <span>Mã hóa:</span>
+              <code>SHA-256</code>
+            </div>
+          </div>
+
+          <button id="btnAuthLogout" class="btn-secondary" style="width:100%; justify-content:center; padding:10px; margin-top:14px; border-color:rgba(239,68,68,0.4); color:#ef4444;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Đăng Xuất</span>
+          </button>
         </div>
 
-        <div class="auth-perms-section">
-          <div class="auth-perms-title">Quyền hạn tài khoản (Permissions):</div>
-          <ul id="authProfilePerms" class="auth-perms-list">
-            <!-- Dynamic permissions injected here -->
-          </ul>
+        <!-- ── PANEL: Quản lý Người dùng (Super Admin only) ── -->
+        <div id="tabPanelUserMgmt" style="display:none;">
+
+          <!-- Thống kê nhanh -->
+          <div class="usermgmt-stats" id="userMgmtStats"></div>
+
+          <!-- Bảng danh sách users -->
+          <div class="usermgmt-table-wrap">
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th>Tên</th><th>Email</th><th>Vai trò</th><th>Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="userTableBody">
+                <tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Form tạo tài khoản mới -->
+          <div class="usermgmt-create-section">
+            <div class="auth-perms-title" style="margin-bottom:12px;">✚ Tạo Tài Khoản Mới</div>
+            <form id="formCreateUser" class="auth-form" style="gap:10px;">
+              <div class="usermgmt-row2">
+                <div class="auth-field">
+                  <label for="newUserName">Họ tên</label>
+                  <div class="auth-input-wrapper">
+                    <span class="auth-input-icon">📛</span>
+                    <input type="text" id="newUserName" class="auth-input" placeholder="Nguyễn Văn A" required>
+                  </div>
+                </div>
+                <div class="auth-field">
+                  <label for="newUserEmail">Email</label>
+                  <div class="auth-input-wrapper">
+                    <span class="auth-input-icon">📧</span>
+                    <input type="email" id="newUserEmail" class="auth-input" placeholder="user@email.com" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="usermgmt-row2">
+                <div class="auth-field">
+                  <label for="newUserPassword">Mật khẩu</label>
+                  <div class="auth-input-wrapper">
+                    <span class="auth-input-icon">🔑</span>
+                    <input type="password" id="newUserPassword" class="auth-input" placeholder="••••••••" required minlength="6">
+                  </div>
+                </div>
+                <div class="auth-field">
+                  <label for="newUserRole">Vai trò</label>
+                  <select id="newUserRole" class="select-input auth-input" style="padding-left:10px;">
+                    <option value="member">🌟 Thành Viên (Member)</option>
+                    <option value="editor">✍️ Biên Tập Viên (Editor)</option>
+                    <option value="admin">🛡️ Quản Trị Viên (Admin)</option>
+                    <option value="guest">👤 Khách (Guest)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="createUserMessage" class="auth-message"></div>
+
+              <button type="submit" id="btnCreateUser" class="btn-primary" style="width:100%; justify-content:center; padding:10px;">
+                ✚ Tạo Tài Khoản
+              </button>
+
+              <p style="font-size:0.73rem; color:var(--text-muted); text-align:center; margin:0;">
+                ⚠️ Tài khoản do bạn tạo <strong>không thể tạo thêm tài khoản khác</strong>
+              </p>
+            </form>
+          </div>
         </div>
 
-        <div class="auth-system-status">
-          <div class="auth-status-item">
-            <span>Trạng thái phiên:</span>
-            <strong style="color: #10b981;">Đang hoạt động (Active)</strong>
-          </div>
-          <div class="auth-status-item">
-            <span>Thuật toán mã hóa:</span>
-            <code>SHA-256 Standard</code>
-          </div>
-          <div class="auth-status-item">
-            <span>Cơ sở phân quyền:</span>
-            <code>data/auth.json</code>
-          </div>
-        </div>
-
-        <button id="btnAuthLogout" class="btn-secondary" style="width: 100%; justify-content: center; padding: 10px; margin-top: 16px; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
-          <span>Đăng Xuất</span>
-        </button>
       </div>
     </div>
   </div>
+
 
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>

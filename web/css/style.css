@@ -1885,3 +1885,135 @@ body.is-locked footer {
   75%       { transform: translateX(-3px); }
   90%       { transform: translateX(3px); }
 }
+
+/* ==========================================================================
+   USER MANAGEMENT — Tab & Table Styles
+   ========================================================================== */
+
+/* Mở rộng auth-card khi có tab quản lý */
+#modalAuth .auth-card {
+  max-width: 560px;
+}
+
+/* Tab Navigation */
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin: 0 -24px 18px -24px;
+  padding: 0 20px;
+  gap: 4px;
+}
+
+.auth-tab {
+  padding: 8px 14px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition-fast);
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-tab:hover  { color: var(--text-main); }
+.auth-tab.active {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+/* Bảng danh sách users */
+.usermgmt-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.user-table thead th {
+  background: rgba(0,0,0,0.2);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 7px 10px;
+  text-align: left;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+.user-table-row td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+.user-table-row:last-child td { border-bottom: none; }
+
+.user-table-row:hover { background: rgba(255,255,255,0.03); }
+
+/* Stats */
+.usermgmt-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.usermgmt-stat-item {
+  flex: 1;
+  min-width: 70px;
+  background: rgba(0,0,0,0.15);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.usermgmt-stat-num {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent-color);
+  display: block;
+}
+
+/* Form tạo tài khoản — 2 cột */
+.usermgmt-create-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+.usermgmt-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .usermgmt-row2 { grid-template-columns: 1fr; }
+  .auth-tabs { padding: 0 12px; }
+  .auth-tab  { padding: 6px 10px; font-size: 0.78rem; }
+}
+
+/* Badge màu cho các role mới */
+.badge-editor { background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.4); }
+.badge-member { background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.4); }
+.badge-guest  { background: rgba(107,114,128,0.2); color: #9ca3af; border: 1px solid rgba(107,114,128,0.4); }
