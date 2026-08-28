@@ -991,6 +991,42 @@ document.addEventListener('DOMContentLoaded', () => {
   async function handleHashRoute() {
     const hash = window.location.hash || '#library';
 
+    // === AUTH GUARD: Yêu cầu đăng nhập để đọc nội dung truyện ===
+    const protectedRoutes = ['#read/', '#story/', '#chap-', '#reader', '#overview'];
+    const isProtected = protectedRoutes.some(route => hash.startsWith(route));
+
+    if (isProtected) {
+      // Đợi AuthManager khởi tạo xong (auth.js chạy trước)
+      const authReady = () => window.AuthManager && window.AuthManager.isAuthenticated !== undefined;
+      if (!authReady()) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      if (!window.AuthManager || !window.AuthManager.isAuthenticated()) {
+        // Lưu lại hash người dùng muốn vào để redirect sau khi đăng nhập
+        sessionStorage.setItem('auth_pending_hash', hash);
+
+        // Chưa đăng nhập → redirect về thư viện + mở modal xác thực
+        window.location.hash = '#library';
+        showToast('🔐 Vui lòng đăng nhập để xem nội dung truyện!', 2800);
+
+        setTimeout(() => {
+          const modal = document.getElementById('modalAuth');
+          if (modal) modal.classList.add('active');
+          const emailInput = document.getElementById('authEmailInput');
+          if (emailInput) emailInput.focus();
+        }, 100);
+
+        // Hiển thị library thay vì nội dung bị chặn
+        stopTTS && stopTTS();
+        DOM.overviewSection && DOM.overviewSection.classList.add('hidden');
+        DOM.readerSection && DOM.readerSection.classList.add('hidden');
+        DOM.librarySection && DOM.librarySection.classList.remove('hidden');
+        return;
+      }
+    }
+    // === KẾT THÚC AUTH GUARD ===
+
     if (hash.startsWith('#read/')) {
       const parts = hash.replace('#read/', '').split('/');
       const storyId = parts[0] || state.currentStoryId;
