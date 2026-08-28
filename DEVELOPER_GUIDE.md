@@ -235,5 +235,241 @@ File này được tải 1 lần khi người dùng mở trang chủ. Định d�
      --accent-color: #38bdf8;
    }
    ```
-3. Mở `web/index.html` và thêm nút chọn theme tương ứng vào phần Settings Drawer.
+3. Mở `web/index.html` và thêm nút chọn theme tương ứng vào phần Settings Drawer:
+   ```html
+   <button class="theme-btn theme-midnight-btn" data-theme="theme-midnight">Midnight</button>
+   ```
 4. Chạy `python deploy.py "feat: add midnight theme"`.
+
+---
+
+## 🎨 7. HƯỚNG DẪN CHI TIẾT PHÁT TRIỂN & THÊM CHỨC NĂNG MỚI TRÊN GIAO DIỆN (FRONTEND UI/UX MANUAL)
+
+Phần này hướng dẫn từng bước kỹ lưỡng khi bạn muốn thêm bất kỳ nút bấm, menu, thanh công cụ, hiệu ứng hoạt ảnh hay tính năng tương tác mới nào vào giao diện đọc truyện.
+
+### A. Kiến Trúc Vòng Đời Router Frontend (SPA Architecture)
+Giao diện hoạt động theo mô hình **Single Page Application (SPA)** điều hướng bằng **URL Hash** (`window.location.hash`):
+- `#` hoặc `""`: Chế độ **Trang Chủ / Thư Viện** (`#viewLibrary`).
+- `#story/{story_id}`: Chế độ **Trang Chi Tiết Bộ Truyện & Mục Lục** (`#viewStoryDetail`).
+- `#read/{story_id}/{chapter_index}`: Chế độ **Đọc & Nghe Âm Thanh Chương Truyện** (`#viewReader`).
+
+Mỗi khi hash thay đổi, hàm `handleHashChange()` trong `web/js/app.js` được kích hoạt $\to$ gọi `switchView(viewName)` để ẩn/hiện các container DOM và gọi hàm render tương ứng (`loadStoryTOC()` hoặc `loadChapter()`).
+
+---
+
+### B. QUY TRÌNH 4 BƯỚC CHUẨN ĐỂ THÊM MỘT TÍNH NĂNG GIAO DIỆN MỚI
+
+#### Bước 1: Khai Báo HTML Cấu Trúc (`web/index.html`)
+Xác định vị trí component mới của bạn nằm ở đâu trong giao diện:
+- **Thanh Header trên cùng**: `<header class="app-header">` (nút tìm kiếm, nút cài đặt, logo).
+- **Thanh Công Cụ Đọc Truyện**: `<div class="reader-floating-bar">` hoặc `<div class="reader-controls">`.
+- **Thanh Tua Âm Thanh / Audio Bar**: `<div class="audio-panel">` & `<div class="scrubber-container">`.
+- **Drawer / Menu Trượt Cài Đặt**: `<div id="settingsDrawer" class="drawer">`.
+- **Modal / Hộp Thoại Nổi**: `<div id="myModal" class="modal-overlay hidden">`.
+
+> ⚠️ **Quy tắc HTML**: Luôn đặt `id` rõ ràng và duy nhất (ví dụ `id="btnSleepTimer"`), sử dụng thẻ ngữ nghĩa (`<button>`, `<section>`, `<dialog>`), thêm `aria-label` và `title` để hỗ trợ trợ năng (Accessibility).
+
+#### Bước 2: Viết CSS Glassmorphism & Tương Thích 5 Themes (`web/css/style.css`)
+> ⚠️ **Quy tắc CSS tối thượng**: **KHÔNG BAO GIỜ** dùng mã màu cố định như `#ffffff`, `#000000`, `black`, `white` cho chữ và nền component. **LUÔN DÙNG** biến CSS (CSS Variables) để giao diện tự động đẹp trên cả 5 Themes (Dark, OLED Black, Sepia, Cream, Emerald):
+
+```css
+/* Các biến CSS chuẩn hệ thống có sẵn */
+--bg-main            /* Màu nền chính trang */
+--bg-card            /* Màu nền thẻ card / modal */
+--bg-header          /* Màu nền mờ thanh header (Glassmorphism) */
+--text-main          /* Màu chữ nội dung chính */
+--text-heading       /* Màu chữ tiêu đề */
+--text-muted         /* Màu chữ phụ, mờ */
+--accent-color       /* Màu tím/xanh thương hiệu nổi bật */
+--border-color       /* Màu đường viền khung */
+--radius-md          /* Bo góc chuẩn (12px) */
+--shadow-card        /* Hiệu ứng đổ bóng nổi */
+--shadow-glow        /* Hiệu ứng hào quang neon khi hover */
+--transition-fast    /* Chuyển động mượt (0.15s ease) */
+```
+
+**Ví dụ viết Style chuẩn cho một Component mới:**
+```css
+.my-custom-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  padding: 16px;
+  backdrop-filter: blur(12px); /* Hiệu ứng Glassmorphism */
+  box-shadow: var(--shadow-card);
+  transition: all var(--transition-fast);
+}
+
+.my-custom-box:hover {
+  border-color: var(--accent-color);
+  box-shadow: var(--shadow-card), var(--shadow-glow);
+  transform: translateY(-2px);
+}
+```
+
+#### Bước 3: Đăng Ký Biến DOM & Khởi Tạo Trạng Thái (`web/js/app.js`)
+1. Thêm selector vào đối tượng `DOM` ở đầu file `app.js`:
+   ```javascript
+   const DOM = {
+     // ... các selector cũ
+     btnSleepTimer: document.getElementById('btnSleepTimer'),
+     sleepTimerModal: document.getElementById('sleepTimerModal'),
+     sleepTimerDisplay: document.getElementById('sleepTimerDisplay')
+   };
+   ```
+2. Khai báo biến lưu trữ trong đối tượng `state`:
+   ```javascript
+   const state = {
+     // ... state cũ
+     sleepTimer: {
+       timerId: null,
+       remainingSeconds: 0,
+       isEnabled: false
+     }
+   };
+   ```
+3. Đọc dữ liệu đã lưu từ `localStorage` nếu là cài đặt cá nhân:
+   ```javascript
+   state.userCustomSetting = localStorage.getItem('tn_custom_setting') || 'default_value';
+   ```
+
+#### Bước 4: Viết Event Listener & Logic Xử Lý
+1. Viết hàm xử lý logic (Handler Function):
+   ```javascript
+   function startSleepTimer(minutes) {
+     if (state.sleepTimer.timerId) clearInterval(state.sleepTimer.timerId);
+     
+     state.sleepTimer.remainingSeconds = minutes * 60;
+     state.sleepTimer.isEnabled = true;
+     
+     state.sleepTimer.timerId = setInterval(() => {
+       state.sleepTimer.remainingSeconds--;
+       updateTimerUI();
+       
+       if (state.sleepTimer.remainingSeconds <= 0) {
+         clearInterval(state.sleepTimer.timerId);
+         stopTTS(); // Dừng phát giọng đọc khi hết giờ
+         showToast('⏰ Đã dừng phát theo hẹn giờ.');
+       }
+     }, 1000);
+   }
+   ```
+2. Gắn sự kiện trong hàm `bindEvents()` của `app.js`:
+   ```javascript
+   function bindEvents() {
+     // ... các event cũ
+     if (DOM.btnSleepTimer) {
+       DOM.btnSleepTimer.addEventListener('click', () => {
+         openSleepTimerModal();
+       });
+     }
+   }
+   ```
+
+---
+
+### 💡 C. 3 VÍ DỤ THỰC CHIẾN MẪU ĐỂ ÁP DỤNG NGAY
+
+---
+
+#### 🌟 Ví Dụ 1: Thêm Chức Năng "Đếm Thời Gian Hẹn Giờ Tự Tắt Khi Nghe Audio (Sleep Timer)"
+
+1. **HTML (`web/index.html`)**: Thêm nút hẹn giờ vào cụm điều khiển âm thanh:
+   ```html
+   <button id="btnSleepTimer" class="icon-btn" title="Hẹn giờ tắt audio">
+     <span>⏱️</span>
+   </button>
+   ```
+2. **CSS (`web/css/style.css`)**:
+   ```css
+   .timer-badge {
+     font-size: 0.75rem;
+     background: var(--accent-color);
+     color: #fff;
+     padding: 2px 6px;
+     border-radius: 10px;
+     margin-left: 4px;
+   }
+   ```
+3. **JS (`web/js/app.js`)**:
+   - Khi bấm vào nút, hiển thị danh sách chọn: `15 phút`, `30 phút`, `45 phút`, `Hết chương này`.
+   - Khi hết thời gian $\to$ gọi `pauseTTS()` hoặc `stopTTS()` và giải phóng `wakeLock`.
+
+---
+
+#### 🌟 Ví Dụ 2: Thêm "Chế Độ Đọc Hai Cột Dạng Trang Sách (Dual-Column Book Mode)"
+
+1. **HTML (`web/index.html`)**: Thêm nút gạt chế độ đọc 2 cột trong Settings Drawer:
+   ```html
+   <div class="setting-item">
+     <span>Chế độ 2 cột (Dạng sách):</span>
+     <input type="checkbox" id="chkDualColumn">
+   </div>
+   ```
+2. **CSS (`web/css/style.css`)**:
+   ```css
+   .reader-body.dual-column {
+     column-count: 2;
+     column-gap: 48px;
+     column-rule: 1px solid var(--border-color);
+     text-align: justify;
+   }
+   
+   @media (max-width: 900px) {
+     /* Tự động về 1 cột trên màn hình điện thoại/tablet nhỏ */
+     .reader-body.dual-column {
+       column-count: 1;
+     }
+   }
+   ```
+3. **JS (`web/js/app.js`)**:
+   ```javascript
+   DOM.chkDualColumn.addEventListener('change', (e) => {
+     const isDual = e.target.checked;
+     DOM.readerBody.classList.toggle('dual-column', isDual);
+     localStorage.setItem('tn_dual_column', isDual ? 'true' : 'false');
+   });
+   ```
+
+---
+
+#### 🌟 Ví Dụ 3: Thêm "Công Cụ Đánh Dấu / Highlight Đoạn Văn Hay (Text Highlight & Notes)"
+
+1. **JS (`web/js/app.js`)**: Lắng nghe sự kiện bôi đen chữ của người dùng:
+   ```javascript
+   DOM.readerBody.addEventListener('mouseup', () => {
+     const selection = window.getSelection();
+     const selectedText = selection.toString().trim();
+     if (selectedText.length > 5) {
+       showFloatingHighlightToolbar(selection);
+     }
+   });
+   ```
+2. Lưu các đoạn trích dẫn vào `IndexedDB` hoặc `localStorage` theo khóa `{storyId}_{chapterIndex}_highlights`.
+3. Khi nạp chương đọc $\to$ tự động bọc thẻ `<mark class="user-highlight">` vào nội dung tương ứng.
+
+---
+
+### 📋 D. QUY TRÌNH KIỂM THỬ & DEPLOY TÍNH NĂNG MỚI LÊN LIVE
+
+1. **Kiểm thử cục bộ trên máy tính**:
+   Khởi chạy server tĩnh tại thư mục `web/`:
+   ```bash
+   python -m http.server 8000 -d web
+   ```
+   Mở trình duyệt truy cập: `http://localhost:8000/` để thử nghiệm UI và kiểm tra Console xem có lỗi JavaScript nào không.
+
+2. **Cập nhật phiên bản Cache PWA (`web/sw.js`)**:
+   Khi sửa đổi file `app.js` hoặc `style.css`, tăng phiên bản cache lên 1 số (ví dụ: `v5` $\to$ `v6`) để tất cả người dùng cũ tự động nhận giao diện mới nhất:
+   ```javascript
+   const CACHE_NAME = 'webstory-cache-v6';
+   ```
+
+3. **Xuất bản tự động lên GitHub Pages**:
+   Chạy lệnh:
+   ```bash
+   python deploy.py "feat: add sleep timer and dual column reading mode"
+   ```
+   Lệnh này sẽ tự động build lại manifest, kiểm tra tính toàn vẹn 100% dữ liệu và push thẳng lên GitHub Pages! 🚀
+
