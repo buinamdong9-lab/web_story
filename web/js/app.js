@@ -506,28 +506,118 @@ document.addEventListener('DOMContentLoaded', () => {
     DOM.recentGrid.replaceChildren(frag);
   }
 
+  // --- ADVANCED VIETNAMESE FUZZY SEARCH ENGINE ---
+  function normalizeSearchText(str) {
+    if (!str) return '';
+    return str.toString().toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, 'd')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function highlightMatches(text, query) {
+    if (!query || !text) return escapeHTML(text);
+    const escapedText = escapeHTML(text);
+    const cleanQ = query.trim();
+    if (!cleanQ) return escapedText;
+    
+    try {
+      // Highlight exact & normalized query match
+      const regex = new RegExp(`(${cleanQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      return escapedText.replace(regex, '<mark class="search-highlight">$1</mark>');
+    } catch (e) {
+      return escapedText;
+    }
+  }
+
   function applyFilterAndSort() {
-    const query = (DOM.searchLibraryInput.value || '').toLowerCase().trim();
+    const rawQuery = (DOM.searchLibraryInput.value || '').trim();
+    const query = normalizeSearchText(rawQuery);
+    const queryTokens = query.split(' ').filter(Boolean);
     let result = state.stories;
 
+    // 1. Filter by category
     if (state.selectedCategory !== 'all') {
       result = result.filter(s => (s.category || '').includes(state.selectedCategory));
     }
 
-    if (query) {
-      result = result.filter(s => 
-        s.title.toLowerCase().includes(query) || 
-        (s.author && s.author.toLowerCase().includes(query)) ||
-        (s.category && s.category.toLowerCase().includes(query))
-      );
+    // 2. Intelligent Multi-Attribute Search (Vietnamese Unaccented + Token Match + Relevance Scoring)
+    if (queryTokens.length > 0) {
+      const scoredResults = [];
+
+      for (let i = 0; i < result.length; i++) {
+        const s = result[i];
+        
+        // Cache normalized fields on story object for ultra-fast instant lookups
+        if (!s._normTitle) s._normTitle = normalizeSearchText(s.title);
+        if (!s._normAuthor) s._normAuthor = normalizeSearchText(s.author || '');
+        if (!s._normCategory) s._normCategory = normalizeSearchText(s.category || '');
+        if (!s._normDesc) s._normDesc = normalizeSearchText(s.description || '');
+
+        let score = 0;
+        const fullTitle = s._normTitle;
+        const fullAuthor = s._normAuthor;
+        const fullCat = s._normCategory;
+        const fullDesc = s._normDesc;
+
+        // Exact full phrase match bonus
+        if (fullTitle === query) score += 1000;
+        else if (fullTitle.startsWith(query)) score += 500;
+        else if (fullTitle.includes(query)) score += 300;
+        else if (fullAuthor.includes(query)) score += 150;
+        else if (fullCat.includes(query)) score += 100;
+
+        // Token-based matching (every token must be present in title, author, category, or desc)
+        let allTokensMatched = true;
+        for (let t = 0; t < queryTokens.length; t++) {
+          const token = queryTokens[t];
+          let tokenMatched = false;
+
+          if (fullTitle.includes(token)) {
+            score += 50;
+            tokenMatched = true;
+          }
+          if (fullAuthor.includes(token)) {
+            score += 30;
+            tokenMatched = true;
+          }
+          if (fullCat.includes(token)) {
+            score += 20;
+            tokenMatched = true;
+          }
+          if (fullDesc.includes(token)) {
+            score += 5;
+            tokenMatched = true;
+          }
+
+          if (!tokenMatched) {
+            allTokensMatched = false;
+            break;
+          }
+        }
+
+        if (allTokensMatched && score > 0) {
+          scoredResults.push({ story: s, score: score });
+        }
+      }
+
+      // Sort by relevance score descending
+      scoredResults.sort((a, b) => b.score - a.score);
+      result = scoredResults.map(item => item.story);
     }
 
-    if (state.sortMode === 'chaps_desc') {
-      result = [...result].sort((a, b) => (b.total_chapters || 0) - (a.total_chapters || 0));
-    } else if (state.sortMode === 'words_desc') {
-      result = [...result].sort((a, b) => (b.total_words || 0) - (a.total_words || 0));
-    } else if (state.sortMode === 'title_asc') {
-      result = [...result].sort((a, b) => a.title.localeCompare(b.title, 'vi'));
+    // 3. Additional Sorting Modes
+    if (!query) {
+      if (state.sortMode === 'chaps_desc') {
+        result = [...result].sort((a, b) => (b.total_chapters || 0) - (a.total_chapters || 0));
+      } else if (state.sortMode === 'words_desc') {
+        result = [...result].sort((a, b) => (b.total_words || 0) - (a.total_words || 0));
+      } else if (state.sortMode === 'title_asc') {
+        result = [...result].sort((a, b) => a.title.localeCompare(b.title, 'vi'));
+      }
     }
 
     state.filteredStories = result;
@@ -550,6 +640,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const frag = document.createDocumentFragment();
 
+    const rawQuery = (DOM.searchLibraryInput.value || '').trim();
+
     nextBatch.forEach(story => {
       const card = document.createElement('a');
       card.className = 'story-card';
@@ -558,14 +650,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const coverSrc = story.cover_image || 'images/cover.jpg';
       const wordsK = story.total_words ? `${(story.total_words / 1000).toFixed(1)}K từ` : '';
 
+      const displayTitle = rawQuery ? highlightMatches(story.title, rawQuery) : escapeHTML(story.title);
+      const displayAuthor = rawQuery && story.author ? highlightMatches(story.author, rawQuery) : escapeHTML(story.author || 'Đang cập nhật');
+
       card.innerHTML = `
         <div class="story-card-cover-box">
           <img src="${coverSrc}" class="story-card-cover" alt="${escapeHTML(story.title)}" onerror="this.src='images/cover.jpg'" loading="lazy">
           <span class="story-card-badge">${escapeHTML(story.status || 'Hoàn Thành')}</span>
         </div>
         <div class="story-card-body">
-          <h3 class="story-card-title">${escapeHTML(story.title)}</h3>
-          <div class="story-card-author">Tác giả: ${escapeHTML(story.author || 'Đang cập nhật')}</div>
+          <h3 class="story-card-title">${displayTitle}</h3>
+          <div class="story-card-author">Tác giả: ${displayAuthor}</div>
           <p class="story-card-desc">${escapeHTML(story.description || 'Bộ truyện đặc sắc.')}</p>
           <div class="story-card-footer">
             <span>📚 ${story.total_chapters || 0} Chương</span>
@@ -1293,13 +1388,16 @@ document.addEventListener('DOMContentLoaded', () => {
     DOM.searchTocInput.addEventListener('input', (e) => {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => {
-        const query = e.target.value.toLowerCase().trim();
-        const filtered = state.toc.filter(chap => 
-          chap.title.toLowerCase().includes(query) || 
-          chap.index.toString() === query
-        );
+        const raw = e.target.value.trim();
+        const query = normalizeSearchText(raw);
+        const filtered = state.toc.filter(chap => {
+          if (!query) return true;
+          const normTitle = normalizeSearchText(chap.title);
+          const chapIdxStr = chap.index.toString();
+          return normTitle.includes(query) || chapIdxStr === query || normTitle.includes(`chuong ${query}`);
+        });
         renderTOCList(filtered);
-      }, 60);
+      }, 50);
     });
 
     DOM.btnToggleTheme.addEventListener('click', () => {
