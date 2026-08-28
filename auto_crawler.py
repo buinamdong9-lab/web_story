@@ -7,6 +7,8 @@ import datetime
 import requests
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 from clean_utils import clean_chapter_title, generate_story_markdown
 from build_library import build_all_library
 
@@ -14,11 +16,12 @@ if sys.stdout:
     sys.stdout.reconfigure(encoding='utf-8')
 
 # ==========================================
-# CẤU HÌNH CRAWLER TỰ ĐỘNG
+# CẤU HÌNH CRAWLER TỰ ĐỘNG & TỐI ƯU HÓA
 # ==========================================
 INTERVAL_HOURS = 6               # Tần suất kiểm tra (mỗi 6 tiếng)
 RETRY_NETWORK_MINUTES = 2        # Thời gian thử lại nếu mất kết nối Internet (phút)
 LOG_FILE = "auto_crawler.log"    # File lưu lịch sử hoạt động
+MAX_LOG_BYTES = 5 * 1024 * 1024  # Giới hạn kích thước log (5MB)
 
 DEFAULT_COOKIE = (
     "XSRF-TOKEN=eyJpdiI6IjVoSUpqa251dGJ6d1FXWGd5emlPR1E9PSIsInZhbHVlIjoib1drWkpMSGxnNE1Fb2dRWHZ2ZkVVNDV4VkF6NzV3aUluWDVYYWJTWmxhcnhObUdLbFNqOHl2Z0ZYL2pPN3BmRnBEMTZHU2xjMTRNbzVwclI5MHUvTnJ6ZXhRU3I5OWR5ZjZPU0VyTHhoT0tTU2txTE9CeVZ3VU1Cdm1rNWNwWGIiLCJtYWMiOiJkZjJkNjJjYThmOWE2ZjA3ODM3YjU0MWMwYjYwODcwYjc3ZGU2Njc0Njg2ODBiMmFiMDQ2MGM0YWZlYjMwZTAxIiwidGFnIjoiIn0%3D; "
@@ -38,11 +41,31 @@ STORY_URL = 'https://akaytruyen.com/truyen/ngoai-truyen-chua-te-chi-lo'
 JSON_FILE = 'ngoai_truyen_chua_te_chi_lo.json'
 MD_FILE = 'ngoai_truyen_chua_te_chi_lo.md'
 
+def get_optimized_session():
+    """Tạo HTTP Session tối ưu với connection pool và tự động thử lại khi mạng chập chờn"""
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["HEAD", "GET", "OPTIONS"]
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=10, pool_maxsize=10)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
+
 def log(msg):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     formatted = f"[{now}] {msg}"
     print(formatted)
     try:
+        # Giới hạn kích thước file log tự động
+        if os.path.exists(LOG_FILE) and os.path.getsize(LOG_FILE) > MAX_LOG_BYTES:
+            with open(LOG_FILE, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            with open(LOG_FILE, 'w', encoding='utf-8') as f:
+                f.writelines(lines[-2000:])
         with open(LOG_FILE, 'a', encoding='utf-8') as f:
             f.write(formatted + "\n")
     except Exception:
@@ -174,7 +197,7 @@ def check_and_update_story():
     log(f"⚡ Phát hiện {len(missing_chaps)} chương mới cần tải: {[m['index'] for m in missing_chaps]}")
 
     # 4. Tải các chương mới
-    session = requests.Session()
+    session = get_optimized_session()
     newly_fetched = {}
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = {executor.submit(fetch_single_chapter, item, session): item for item in missing_chaps}
@@ -192,7 +215,7 @@ def check_and_update_story():
 
     all_sorted_chapters = [existing_chapters[k] for k in sorted(existing_chapters.keys())]
 
-    # 6. Ghi đè file JSON & Markdown
+    # 6. Ghi đè an toàn file JSON (Atomic Write) & Markdown
     story_data = {
         'title': existing_story.get('title', 'Ngoại Truyện - Chúa Tể Chi Lộ'),
         'author': existing_story.get('author', 'Akay Hậu'),
@@ -202,12 +225,22 @@ def check_and_update_story():
         'chapters': all_sorted_chapters
     }
 
-    with open(JSON_FILE, 'w', encoding='utf-8') as f:
+    temp_json = JSON_FILE + ".tmp"
+    with open(temp_json, 'w', encoding='utf-8') as f:
         json.dump(story_data, f, ensure_ascii=False, indent=2)
+    if os.path.exists(JSON_FILE):
+        os.replace(temp_json, JSON_FILE)
+    else:
+        os.rename(temp_json, JSON_FILE)
 
     md_content = generate_story_markdown(story_data['title'], all_sorted_chapters)
-    with open(MD_FILE, 'w', encoding='utf-8') as f:
+    temp_md = MD_FILE + ".tmp"
+    with open(temp_md, 'w', encoding='utf-8') as f:
         f.write(md_content)
+    if os.path.exists(MD_FILE):
+        os.replace(temp_md, MD_FILE)
+    else:
+        os.rename(temp_md, MD_FILE)
 
     # 7. Đồng bộ Thư Viện Web
     log("[*] Đang cập nhật Thư Viện Web...")
