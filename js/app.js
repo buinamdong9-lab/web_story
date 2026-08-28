@@ -286,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
         title: state.storyMeta.title,
         lastChap: chapIndex,
         totalChaps: state.storyMeta.total_chapters || state.toc.length,
-        coverImage: state.storyMeta.cover_image || 'images/cover.jpg',
         timestamp: Date.now()
       };
 
@@ -333,10 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: chapTitle,
         artist: state.storyMeta.title,
-        album: 'Kho Truyện Audio Online',
-        artwork: [
-          { src: state.storyMeta.cover_image || 'images/cover.jpg', sizes: '512x512', type: 'image/jpeg' }
-        ]
+        album: 'Kho Truyện Audio Online'
       });
 
       navigator.mediaSession.setActionHandler('play', resumeTTS);
@@ -425,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
           total_chapters: 102,
           total_words: 445599,
           description: 'Hành trình tu chân và kỳ duyên tại Long tộc cấm địa.',
-          cover_image: 'images/cover.jpg'
         }];
         state.categories = ['Tiên Hiệp', 'Huyền Huyễn', 'Tu Chân'];
       }
@@ -493,8 +488,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const a = document.createElement('a');
       a.className = 'recent-card';
       a.href = `#read/${item.storyId}/${item.lastChap}`;
+      const initials = getPlaceholderInitials(item.title);
+      const color = getTitleColor(item.title);
       a.innerHTML = `
-        <img src="${item.coverImage}" class="recent-card-img" alt="${escapeHTML(item.title)}" onerror="this.src='images/cover.jpg'">
+        <div class="recent-card-img cover-placeholder" style="background:${color};">
+          <span class="cover-placeholder-letter">${initials}</span>
+        </div>
         <div class="recent-card-info">
           <div class="recent-card-title">${escapeHTML(item.title)}</div>
           <div class="recent-card-progress">📖 Đang đọc Chương ${item.lastChap} / ${item.totalChaps}</div>
@@ -517,6 +516,42 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\s+/g, ' ')
       .trim();
   }
+
+  // --- COVER PLACEHOLDER HELPERS ---
+  function getPlaceholderInitials(title) {
+    if (!title) return '?';
+    const words = title.trim().split(/\s+/);
+    if (words.length === 1) return words[0].charAt(0).toUpperCase();
+    return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  }
+
+  function getTitleColor(title) {
+    if (!title) return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    let hash = 0;
+    for (let i = 0; i < title.length; i++) {
+      hash = title.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const palettes = [
+      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+      'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)',
+      'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)',
+      'linear-gradient(135deg, #f77062 0%, #fe5196 100%)',
+      'linear-gradient(135deg, #0ba360 0%, #3cba92 100%)',
+      'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)',
+      'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
+      'linear-gradient(135deg, #fd7043 0%, #ff8a65 100%)',
+      'linear-gradient(135deg, #7c4dff 0%, #448aff 100%)',
+      'linear-gradient(135deg, #1de9b6 0%, #1565c0 100%)',
+      'linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)'
+    ];
+    return palettes[Math.abs(hash) % palettes.length];
+  }
+
 
   function highlightMatches(text, query) {
     if (!query || !text) return escapeHTML(text);
@@ -647,15 +682,18 @@ document.addEventListener('DOMContentLoaded', () => {
       card.className = 'story-card';
       card.href = `#story/${story.id}`;
 
-      const coverSrc = story.cover_image || 'images/cover.jpg';
       const wordsK = story.total_words ? `${(story.total_words / 1000).toFixed(1)}K từ` : '';
+      const initials = getPlaceholderInitials(story.title);
+      const color = getTitleColor(story.title);
 
       const displayTitle = rawQuery ? highlightMatches(story.title, rawQuery) : escapeHTML(story.title);
       const displayAuthor = rawQuery && story.author ? highlightMatches(story.author, rawQuery) : escapeHTML(story.author || 'Đang cập nhật');
 
       card.innerHTML = `
         <div class="story-card-cover-box">
-          <img src="${coverSrc}" class="story-card-cover" alt="${escapeHTML(story.title)}" onerror="this.src='images/cover.jpg'" loading="lazy" decoding="async" width="240" height="320">
+          <div class="story-card-cover cover-placeholder" style="background:${color};">
+            <span class="cover-placeholder-letter">${initials}</span>
+          </div>
           <span class="story-card-badge">${escapeHTML(story.status || 'Hoàn Thành')}</span>
         </div>
         <div class="story-card-body">
@@ -703,7 +741,14 @@ document.addEventListener('DOMContentLoaded', () => {
       DOM.brandTitle.textContent = state.storyMeta.title;
       DOM.drawerStoryTitle.textContent = `Mục Lục: ${state.storyMeta.title}`;
       DOM.storyTitle.textContent = state.storyMeta.title;
-      DOM.heroCover.src = state.storyMeta.cover_image || 'images/cover.jpg';
+      // Update hero cover placeholder color & initials
+      if (DOM.heroCover) {
+        const _color = getTitleColor(state.storyMeta.title);
+        const _init = getPlaceholderInitials(state.storyMeta.title);
+        DOM.heroCover.style.background = _color;
+        const _icon = DOM.heroCover.querySelector('.cover-placeholder-icon');
+        if (_icon) _icon.textContent = _init;
+      }
       DOM.statTotalChap.textContent = state.storyMeta.total_chapters || state.toc.length;
       DOM.statTotalWords.textContent = `${((state.storyMeta.total_words || 0) / 1000).toFixed(1)}K`;
       DOM.statStoryStatus.textContent = state.storyMeta.status || 'Hoàn Thành';

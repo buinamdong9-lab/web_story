@@ -484,9 +484,51 @@ body.theme-sepia .search-highlight {
 .recent-card-img {
   width: 56px;
   height: 74px;
-  object-fit: cover;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
+}
+
+/* Cover Placeholder - replaces all story cover images */
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cover-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.cover-placeholder-letter,
+.cover-placeholder-icon {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: var(--font-heading);
+  letter-spacing: 0.05em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 1;
+  user-select: none;
+}
+
+.recent-card-img.cover-placeholder {
+  width: 56px;
+  height: 74px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.recent-card-img.cover-placeholder .cover-placeholder-letter {
+  font-size: 1.1rem;
 }
 
 .recent-card-info {
@@ -548,7 +590,6 @@ body.theme-sepia .search-highlight {
 .story-card-cover {
   width: 100%;
   height: 100%;
-  object-fit: cover;
   transition: transform 0.4s ease;
 }
 
@@ -637,11 +678,10 @@ body.theme-sepia .search-highlight {
   aspect-ratio: 3/4;
 }
 
-.cover-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.cover-placeholder#heroCover .cover-placeholder-icon {
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
 }
 
 .story-details {
